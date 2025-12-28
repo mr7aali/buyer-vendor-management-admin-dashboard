@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Link } from 'react-router-dom';
 import { X, LayoutDashboard, BarChart2, Users, Store, ShoppingCart, MessageSquare, Bell, Shield, Settings, User, CreditCard } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -55,16 +55,7 @@ export function FullWidthMenu({
       <div className="max-w-[1600px] mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#278687]/10 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#278687" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 17L12 22L22 17" stroke="#278687" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 12L12 17L22 12" stroke="#278687" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-2xl font-bold text-gray-900">
-              Scan2Trade
-            </span>
+            <img src="/images/Logo.svg" alt="lINKOOTO" className="h-12 w-auto" />
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-6 h-6 text-gray-500" />

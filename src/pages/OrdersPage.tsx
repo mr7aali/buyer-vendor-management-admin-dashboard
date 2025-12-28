@@ -3,6 +3,7 @@ import { Header } from '../components/dashboard/Header';
 import { StatusBadge, StatusType } from '../components/ui/StatusBadge';
 import { Search, Filter, Download, Eye, MoreHorizontal, Calendar, Plane, Truck, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ExportReportModal } from '../components/transactions/ExportReportModal';
 
 type Order = {
   id: string;
@@ -26,6 +27,7 @@ export function OrdersPage() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Expanded Mock Data
   const orders: Order[] = [
@@ -85,9 +87,18 @@ export function OrdersPage() {
       <Header />
 
       <main className="max-w-[1600px] mx-auto px-6 pt-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Management</h1>
-          <p className="text-gray-500">Track and manage all customer orders.</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Order Management</h1>
+            <p className="text-gray-500">Track and manage all customer orders.</p>
+          </div>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
         </div>
 
         {/* Stats */}
@@ -248,8 +259,8 @@ export function OrdersPage() {
                       key={page}
                       onClick={() => handlePageChange(page)}
                       className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                          ? 'bg-primary text-white'
-                          : 'text-gray-600 hover:bg-gray-50'
+                        ? 'bg-primary text-white'
+                        : 'text-gray-600 hover:bg-gray-50'
                         }`}
                     >
                       {page}
@@ -268,6 +279,13 @@ export function OrdersPage() {
             </div>
           )}
         </div>
+
+        <ExportReportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          data={filteredOrders}
+          reportType="orders"
+        />
       </main>
     </div>
   );

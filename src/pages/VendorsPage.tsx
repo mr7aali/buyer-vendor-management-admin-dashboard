@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Header } from '../components/dashboard/Header';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { Search, Filter, Star, MoreVertical, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Search, Filter, Star, MoreVertical, ExternalLink, ShieldCheck, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ExportReportModal } from '../components/transactions/ExportReportModal';
 
 export function VendorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const vendors = [{
     id: '1',
@@ -67,11 +69,13 @@ export function VendorsPage() {
               Monitor vendor performance, approvals, and compliance.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm">
-              Invite Vendor
-            </button>
-          </div>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
         </div>
 
         {/* Filters */}
@@ -170,6 +174,13 @@ export function VendorsPage() {
             </div>
           )}
         </div>
+
+        <ExportReportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          data={filteredVendors}
+          reportType="vendors"
+        />
       </main>
     </div>
   );

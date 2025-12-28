@@ -39,10 +39,10 @@ export function ForgotPasswordPage() {
     <div className="min-h-screen bg-[#E8F3F1] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
         <div className="p-8">
-          <Link to="/login" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors">
+          <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            Back to Login
-          </Link>
+            Go back
+          </button>
 
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">

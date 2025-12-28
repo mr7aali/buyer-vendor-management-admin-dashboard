@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/dashboard/Header';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { Mail, Phone, MapPin, Calendar, ShieldCheck, ArrowLeft, MessageSquare } from 'lucide-react';
@@ -8,6 +8,7 @@ export function UserDetailPage() {
   const {
     id
   } = useParams();
+  const navigate = useNavigate();
 
   const buyerId = id;
   const foundUser = MOCK_BUYERS.find(b => b.id === buyerId);
@@ -42,10 +43,10 @@ export function UserDetailPage() {
     <Header />
 
     <main className="max-w-[1600px] mx-auto px-6 pt-8">
-      <Link to="/buyers" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6 transition-colors">
+      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" />
-        Back to Buyers
-      </Link>
+        Go back
+      </button>
 
       <div className="grid grid-cols-12 gap-6">
         {/* Left Column: Profile & Stats */}
@@ -148,7 +149,7 @@ export function UserDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  <tr className="hover:bg-gray-50 cursor-pointer group transition-colors">
+                  <tr onClick={() => navigate('/orders/ORD-7821')} className="hover:bg-gray-50 cursor-pointer group transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">#ORD-7821</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">Oct 24, 2023</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">2 items</td>
@@ -157,7 +158,7 @@ export function UserDetailPage() {
                       <StatusBadge status="in-progress" />
                     </td>
                   </tr>
-                  <tr className="hover:bg-gray-50 cursor-pointer group transition-colors">
+                  <tr onClick={() => navigate('/orders/ORD-7822')} className="hover:bg-gray-50 cursor-pointer group transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">#ORD-7822</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">Oct 25, 2023</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1 item</td>
@@ -188,7 +189,7 @@ export function UserDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  <tr className="hover:bg-gray-50 cursor-pointer group transition-colors">
+                  <tr onClick={() => navigate('/orders/ORD-7820')} className="hover:bg-gray-50 cursor-pointer group transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">#ORD-7820</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">Oct 20, 2023</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">1 item</td>
@@ -197,7 +198,7 @@ export function UserDetailPage() {
                       <StatusBadge status="completed" />
                     </td>
                   </tr>
-                  <tr className="hover:bg-gray-50 cursor-pointer group transition-colors">
+                  <tr onClick={() => navigate('/orders/ORD-7815')} className="hover:bg-gray-50 cursor-pointer group transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">#ORD-7815</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">Sep 15, 2023</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">3 items</td>

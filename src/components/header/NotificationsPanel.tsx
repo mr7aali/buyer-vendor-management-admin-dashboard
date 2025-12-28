@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, Check, Clock, AlertTriangle, Info } from 'lucide-react';
 
 interface Notification {
@@ -104,9 +105,13 @@ export function NotificationsPanel({
       </div>
 
       <div className="p-3 bg-gray-50 text-center border-t border-gray-100">
-        <button className="text-xs font-medium text-gray-600 hover:text-gray-900">
+        <Link
+          to="/notifications"
+          onClick={onClose}
+          className="text-xs font-medium text-gray-600 hover:text-gray-900 block w-full"
+        >
           View all notifications
-        </button>
+        </Link>
       </div>
     </div>
   );

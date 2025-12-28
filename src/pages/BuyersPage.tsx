@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { Header } from '../components/dashboard/Header';
 import { StatusBadge } from '../components/ui/StatusBadge';
-import { Search, MessageCircle, Eye, ShieldCheck, ChevronLeft, ChevronRight, Phone, MapPin, Calendar, Mail } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, MessageCircle, Eye, ShieldCheck, ChevronLeft, ChevronRight, Phone, MapPin, Calendar, Mail, Download } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ExportReportModal } from '../components/transactions/ExportReportModal';
 
 import { MOCK_BUYERS } from '../data/mockBuyers';
 
 export function BuyersPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Filtering Logic
   const filteredBuyers = MOCK_BUYERS.filter(buyer => {
@@ -38,9 +41,18 @@ export function BuyersPage() {
       <Header />
 
       <main className="max-w-[1600px] mx-auto px-6 pt-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Buyers Management</h1>
-          <p className="text-gray-500">Manage your customer base, view history, and handle accounts.</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Buyers Management</h1>
+            <p className="text-gray-500">Manage your customer base, view history, and handle accounts.</p>
+          </div>
+          <button
+            onClick={() => setIsExportModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export Report
+          </button>
         </div>
 
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -108,7 +120,11 @@ export function BuyersPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginatedBuyers.map(buyer => (
-                  <tr key={buyer.id} className="hover:bg-gray-50 transition-colors cursor-pointer group">
+                  <tr
+                    key={buyer.id}
+                    onClick={() => navigate(`/buyers/${buyer.id}`)}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <img className="h-10 w-10 rounded-full object-cover border border-gray-200" src={buyer.avatar} alt="" />
@@ -202,7 +218,14 @@ export function BuyersPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+
+        <ExportReportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          data={filteredBuyers}
+          reportType="buyers"
+        />
+      </main >
+    </div >
   );
 }

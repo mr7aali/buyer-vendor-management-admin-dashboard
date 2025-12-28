@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, ChevronDown, Menu, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Bell, Settings, ChevronDown, Menu } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { FullWidthMenu } from '../header/FullWidthMenu';
 import { GlobalSearchDropdown } from '../header/GlobalSearchDropdown';
@@ -134,16 +134,7 @@ export function Header() {
         {/* Center: Logo */}
         <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-sm">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#278687" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 17L12 22L22 17" stroke="#278687" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M2 12L12 17L22 12" stroke="#278687" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-gray-900 tracking-tight hidden md:block">
-              Scan2Trade
-            </span>
+            <img src="/images/Logo.svg" alt="lINKOOTO" className="h-10 w-auto" />
           </Link>
         </div>
 
