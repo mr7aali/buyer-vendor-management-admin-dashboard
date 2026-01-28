@@ -72,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   /* ---------- PERMISSION CHECK ---------- */
   const checkPermission = (path: string): boolean => {
     if (!admin) return false;
-
+    console.log(path);
     // SUPER_ADMIN can access everything
     if (admin.role === "SUPER_ADMIN") return true;
 
@@ -88,6 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
      *   "/vendors"
      * ]
      */
+
     return admin.permissions.some((permission) => {
       // Convert route param to regex
       const regex = new RegExp(
