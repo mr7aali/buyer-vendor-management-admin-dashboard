@@ -1,77 +1,130 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
-import { Role, ROLE_PERMISSIONS } from '../utils/permissions';
-interface User {
-  id: string;
-  name: string;
+import { useAdminLoginMutation } from "@/redux/features/api/baseApi";
+import React, { createContext, useContext, useEffect, useState } from "react";
+// import { useAdminLoginMutation } from "@/store/api/baseApi";
+
+/* ---------- Types ---------- */
+
+export interface Admin {
+  id: number;
   email: string;
-  role: Role;
-  avatar: string;
+  role: string; // SUPER_ADMIN | STAFF | SUB_ADMIN
+  permissions: string[]; // route-based permissions
 }
+
 interface AuthContextType {
-  user: User | null;
+  admin: Admin | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, role?: Role) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkPermission: (path: string) => boolean;
 }
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-export function AuthProvider({
-  children
-}: {
-  children: React.ReactNode;
-}) {
-  const [user, setUser] = useState<User | null>(null);
+
+/* ---------- Context ---------- */
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+/* ---------- Provider ---------- */
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [admin, setAdmin] = useState<Admin | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [adminLogin] = useAdminLoginMutation();
+
+  /* ---------- Restore Session ---------- */
   useEffect(() => {
-    // Check for stored session
-    const storedUser = localStorage.getItem('scan2trade_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const storedToken = localStorage.getItem("accessToken");
+    const storedAdmin = localStorage.getItem("admin");
+
+    if (storedToken && storedAdmin) {
+      setToken(storedToken);
+      setAdmin(JSON.parse(storedAdmin));
     }
+
     setIsLoading(false);
   }, []);
-  const login = async (email: string, role: Role = 'Admin') => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const mockUser: User = {
-      id: '1',
-      name: 'Steve Rogers',
-      email,
-      role,
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80'
-    };
-    setUser(mockUser);
-    localStorage.setItem('scan2trade_user', JSON.stringify(mockUser));
-    setIsLoading(false);
+
+  /* ---------- LOGIN ---------- */
+  const login = async (email: string, password: string) => {
+    const response = await adminLogin({ email, password }).unwrap();
+
+    const { accessToken, admin } = response.data;
+
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("admin", JSON.stringify(admin));
+
+    setToken(accessToken);
+    setAdmin(admin);
   };
+
+  /* ---------- LOGOUT ---------- */
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('scan2trade_user');
+    localStorage.clear();
+    setAdmin(null);
+    setToken(null);
   };
+
+  /* ---------- PERMISSION CHECK ---------- */
   const checkPermission = (path: string): boolean => {
-    if (!user) return false;
-    const allowedPaths = ROLE_PERMISSIONS[user.role] || [];
-    if (path === '/') return allowedPaths.includes('/');
-    // Allow access to sub-routes (e.g., /orders/123) if parent (/orders) is allowed
-    return allowedPaths.some(allowed => allowed !== '/' && path.startsWith(allowed));
+    if (!admin) return false;
+    console.log(path);
+    // SUPER_ADMIN can access everything
+    if (admin.role === "SUPER_ADMIN") return true;
+
+    // Normalize path (remove trailing slash)
+
+    // console.log(normalizedPath, "normalizedPath");
+    /**
+     * Example permissions:
+     * [
+     *   "/dashboard",
+     *   "/orders",
+     *   "/orders/:id",
+     *   "/vendors"
+     * ]
+     */
+
+    return admin.permissions.some((permissions) => {
+      if (path === "/" && permissions.match("dashboard.view")) {
+        {
+          return true;
+        }
+      } else {
+        if (permissions.split(".")[0] === path?.replace(/\//g, "")) {
+          return true;
+        }
+      }
+    });
   };
-  return <AuthContext.Provider value={{
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-    checkPermission
-  }}>
+
+  return (
+    <AuthContext.Provider
+      value={{
+        admin,
+        token,
+        isAuthenticated: !!token,
+        isLoading,
+        login,
+        logout,
+        checkPermission,
+      }}
+    >
       {children}
-    </AuthContext.Provider>;
-}
-export function useAuth() {
+    </AuthContext.Provider>
+  );
+};
+
+/* ---------- Hook ---------- */
+
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
-}
+};
