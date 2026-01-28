@@ -1,4 +1,5 @@
 import { useAdminLoginMutation } from "@/redux/features/api/baseApi";
+import { Regex } from "lucide-react";
 import React, { createContext, useContext, useEffect, useState } from "react";
 // import { useAdminLoginMutation } from "@/store/api/baseApi";
 
@@ -77,8 +78,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (admin.role === "SUPER_ADMIN") return true;
 
     // Normalize path (remove trailing slash)
-    const normalizedPath = path.replace(/\/$/, "");
 
+    // console.log(normalizedPath, "normalizedPath");
     /**
      * Example permissions:
      * [
@@ -89,12 +90,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
      * ]
      */
 
-    return admin.permissions.some((permission) => {
-      // Convert route param to regex
-      const regex = new RegExp(
-        "^" + permission.replace(/:\w+/g, "[^/]+") + "$",
-      );
-      return regex.test(normalizedPath);
+    return admin.permissions.some((permissions) => {
+      if (path === "/" && permissions.match("dashboard.view")) {
+        {
+          return true;
+        }
+      } else {
+        console.log(
+          permissions.split(".")[0],
+          "split",
+          path?.replace(/\//g, ""),
+        );
+        console.log(path.includes(permissions.split(".")[0]));
+        if (permissions.split(".")[0] === path?.replace(/\//g, "")) {
+          return true;
+        }
+      }
     });
   };
 
