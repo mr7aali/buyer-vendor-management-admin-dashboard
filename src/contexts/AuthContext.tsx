@@ -1,5 +1,4 @@
 import { useAdminLoginMutation } from "@/redux/features/api/baseApi";
-import { Regex } from "lucide-react";
 import React, { createContext, useContext, useEffect, useState } from "react";
 // import { useAdminLoginMutation } from "@/store/api/baseApi";
 
@@ -96,12 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           return true;
         }
       } else {
-        console.log(
-          permissions.split(".")[0],
-          "split",
-          path?.replace(/\//g, ""),
-        );
-        console.log(path.includes(permissions.split(".")[0]));
         if (permissions.split(".")[0] === path?.replace(/\//g, "")) {
           return true;
         }

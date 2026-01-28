@@ -62,10 +62,7 @@ export function FullWidthMenu({ isOpen, onClose }: FullWidthMenuProps) {
       />
 
       {/* Menu Content */}
-      <div
-        style={{ border: "1px solid red" }}
-        className="relative bg-white w-full max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-top duration-300"
-      >
+      <div className="relative bg-white w-full max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-top duration-300">
         <div className="max-w-[1600px] mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
