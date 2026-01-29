@@ -96,11 +96,13 @@ export const baseApi = createApi({
   reducerPath: "baseApi",
   baseQuery: fetchBaseQuery({
     baseUrl: "http://localhost:3000",
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as any).auth?.token;
+    prepareHeaders: (headers) => {
+      const token = localStorage?.getItem("accessToken"); // key name must match
+
       if (token) {
         headers.set("authorization", `Bearer ${token}`);
       }
+
       return headers;
     },
   }),
