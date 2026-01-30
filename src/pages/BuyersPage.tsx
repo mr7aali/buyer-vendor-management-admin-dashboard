@@ -55,7 +55,7 @@ export function BuyersPage() {
   } = useGetAllUsersQuery(queryParams, {
     refetchOnMountOrArgChange: true,
   });
-  console.log(isFetching);
+
   const buyers = rawResponse?.data.data || [];
   const meta = rawResponse?.data.meta as
     | {
@@ -108,18 +108,6 @@ export function BuyersPage() {
             />
           </div>
           <div className="flex flex-wrap gap-3">
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
             <select
               value={genderFilter}
               onChange={(e) => {
