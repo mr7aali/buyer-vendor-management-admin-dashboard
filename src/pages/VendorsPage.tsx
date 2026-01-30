@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Header } from "../components/dashboard/Header";
-import { StatusBadge } from "../components/ui/StatusBadge";
+
 import {
   Search,
-  Filter,
   Star,
-  MoreVertical,
   ExternalLink,
   ShieldCheck,
   Download,
@@ -62,7 +60,7 @@ export function VendorsPage() {
   ];
   const { data } = useGetAllVendorsQuery({});
   const vendorsData = data?.data?.items;
-  console.log(vendorsData);
+
   const filteredVendors = vendors.filter((vendor) => {
     const matchesSearch = vendor.name
       .toLowerCase()
