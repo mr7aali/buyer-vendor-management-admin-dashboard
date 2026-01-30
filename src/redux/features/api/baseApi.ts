@@ -64,7 +64,7 @@ export const baseApi = createApi({
         search?: string;
         vendorCode?: string;
         gender?: string;
-        isActive?: string;
+        isActive?: string | undefined;
         businessName?: string;
         minRevenue?: string;
         maxRevenue?: string;
