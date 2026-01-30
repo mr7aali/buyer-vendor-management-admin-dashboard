@@ -17,8 +17,8 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { ExportReportModal } from "../components/transactions/ExportReportModal";
 
-import { MOCK_BUYERS } from "../data/mockBuyers";
 import { useGetAllUsersQuery } from "@/redux/features/api/baseApi";
+import { cn } from "@/lib/utils";
 
 export function BuyersPage() {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ export function BuyersPage() {
     error,
     isLoading,
   } = useGetAllUsersQuery(
-    {},
+    { userType: "buyer" },
     {
       refetchOnMountOrArgChange: true,
     },
@@ -195,11 +195,14 @@ export function BuyersPage() {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <img
-                            className="object-cover w-10 h-10 border border-gray-200 rounded-full"
-                            src={buyer.buyer?.profilePhotoUrl}
-                            alt=""
-                          />
+                          <div className="w-10 h-10">
+                            <img
+                              className="object-cover w-full h-full border border-gray-200 rounded-full"
+                              src={buyer.buyer?.profilePhotoUrl}
+                              alt=""
+                            />
+                          </div>
+
                           <div>
                             <div className="flex items-center gap-1 text-sm font-medium text-gray-900">
                               {buyer.buyer?.fulllName ?? "-- --"}
@@ -229,14 +232,30 @@ export function BuyersPage() {
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-400">
                             <Calendar className="w-3 h-3" />
-                            Joined {buyer.createdAt}
+                            Joined{" "}
+                            {new Date(buyer.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              },
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge
+                        {/* <StatusBadge
                           status={buyer.userType.toLowerCase() as any}
-                        />
+                        /> */}
+                        <span
+                          className={cn(
+                            "inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border",
+                            "bg-[#E6F4EA] text-[#1E7E34] border-[#1E7E34]/20",
+                          )}
+                        >
+                          {buyer.userType.toLowerCase()}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                         N/A
@@ -320,12 +339,12 @@ export function BuyersPage() {
           </div>
         </div>
 
-        {/* <ExportReportModal
+        <ExportReportModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
           data={buyers}
           reportType="buyers"
-        /> */}
+        />
       </main>
     </div>
   );

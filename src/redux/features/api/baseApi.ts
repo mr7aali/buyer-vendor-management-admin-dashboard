@@ -52,7 +52,7 @@ export const baseApi = createApi({
       query: (params: {
         page?: string;
         limit?: string;
-        userType?: string;
+        userType?: "buyer" | "vendor" | "user";
         search?: string;
         gender?: string;
         isActive?: string;
