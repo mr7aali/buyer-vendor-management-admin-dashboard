@@ -41,13 +41,18 @@ export type IVendor = {
 };
 
 export type IVendorsListApiResponse = {
-  data: IVendor[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
+  success: true;
+  statusCode: number;
+  message: string;
+  data: {
+    items: IVendor[];
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
   };
 };

@@ -81,7 +81,7 @@ export const baseApi = createApi({
       }
     >({
       query: (params) => ({
-        url: `/vendors`,
+        url: `/auth/all-vendor`,
         method: "GET",
         params: params,
       }),
