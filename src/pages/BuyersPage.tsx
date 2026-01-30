@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Header } from "../components/dashboard/Header";
-import { StatusBadge } from "../components/ui/StatusBadge";
+
 import {
   Search,
   MessageCircle,
@@ -32,7 +32,7 @@ export function BuyersPage() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Build query parameters
+  // Build query parameters - only include valid sortBy values
   const queryParams = {
     userType: "buyer",
     page: currentPage.toString(),
@@ -42,7 +42,8 @@ export function BuyersPage() {
     ...(statusFilter !== "all" && {
       isActive: statusFilter === "active" ? "true" : "false",
     }),
-    sortBy,
+    // Only include sortBy if it's createdAt or email (known valid values)
+    ...(["createdAt", "email"].includes(sortBy) && { sortBy }),
     sortOrder,
   };
 
@@ -50,10 +51,11 @@ export function BuyersPage() {
     data: rawResponse,
     error,
     isLoading,
+    isFetching,
   } = useGetAllUsersQuery(queryParams, {
     refetchOnMountOrArgChange: true,
   });
-
+  console.log(isFetching);
   const buyers = rawResponse?.data.data || [];
   const meta = rawResponse?.data.meta as
     | {
@@ -75,7 +77,7 @@ export function BuyersPage() {
     }
     setCurrentPage(1);
   };
-
+  const isBusy = isFetching || isLoading;
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
       <Header />
@@ -150,7 +152,7 @@ export function BuyersPage() {
             >
               <option value="createdAt">Sort by Date</option>
               <option value="email">Sort by Email</option>
-              <option value="fulllName">Sort by Name</option>
+              {/* Removed name sorting - add back when you know the correct field name */}
             </select>
             <button
               onClick={() => {
@@ -180,7 +182,7 @@ export function BuyersPage() {
 
         {/* Table */}
         <div className="overflow-hidden bg-white border border-gray-100 shadow-sm rounded-2xl">
-          {isLoading ? (
+          {isBusy ? (
             <div className="flex items-center justify-center p-12">
               <div className="text-gray-500">Loading buyers...</div>
             </div>
@@ -241,9 +243,9 @@ export function BuyersPage() {
                             <div>
                               <div className="flex items-center gap-1 text-sm font-medium text-gray-900">
                                 {buyer.buyer?.fulllName ?? "-- --"}
-                                {buyer.isVerified && (
-                                  <ShieldCheck className="w-3 h-3 text-green-500" />
-                                )}
+                                {/* {buyer.isVerified && ( */}
+                                <ShieldCheck className="w-3 h-3 text-green-500" />
+                                {/* // )} */}
                               </div>
                               <div className="text-xs text-gray-500">
                                 ID: #{buyer.index}
@@ -284,13 +286,13 @@ export function BuyersPage() {
                             className={cn(
                               "inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-medium border",
                               buyer?.buyer?._count?.orders &&
-                                buyer?.buyer?._count?.orders > 20
+                                buyer?.buyer?._count?.orders > 0
                                 ? "bg-[#E6F4EA] text-[#1E7E34] border-[#1E7E34]/20"
                                 : "bg-gray-100 text-gray-600 border-gray-300/20",
                             )}
                           >
                             {buyer?.buyer?._count?.orders &&
-                            buyer?.buyer?._count?.orders
+                            buyer?.buyer?._count?.orders > 0
                               ? "Active"
                               : "Inactive"}
                           </span>
