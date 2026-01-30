@@ -28,32 +28,53 @@ export function BuyersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const { data, error } = useGetAllUsersQuery({});
-  console.log(data);
-  console.log(error);
+  const {
+    data: rawResponse,
+    error,
+    isLoading,
+  } = useGetAllUsersQuery(
+    {},
+    {
+      refetchOnMountOrArgChange: true,
+    },
+  );
+  const buyers = rawResponse?.data.data || [];
+  const meta = rawResponse?.data.meta as
+    | {
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+      }
+    | undefined;
+
+  // console.log(buyers?.map((i) => console.log(i)));
+
   // Filtering Logic
-  const filteredBuyers = MOCK_BUYERS.filter((buyer) => {
-    const matchesSearch =
-      buyer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      buyer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      buyer.id.toLowerCase().includes(searchTerm.toLowerCase());
+  // const filteredBuyers = buyers.filter((buyer) => {
+  //   const matchesSearch =
+  //     buyer.buyer?.fulllName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     buyer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     buyer.id.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      buyer.status.toLowerCase() === statusFilter.toLowerCase();
-    const matchesCountry =
-      countryFilter === "all" ||
-      buyer.country.toLowerCase() === countryFilter.toLowerCase();
+  //   // const matchesStatus =
+  //   //   statusFilter === "all" ||
+  //   //   buyer.status.toLowerCase() === statusFilter.toLowerCase();
+  //   // const matchesCountry =
+  //   //   countryFilter === "all" ||
+  //   //   buyer.country.toLowerCase() === countryFilter.toLowerCase();
 
-    return matchesSearch && matchesStatus && matchesCountry;
-  });
+  //   return matchesSearch && matchesStatus && matchesCountry;
+  // });
 
   // Pagination Logic
-  const totalPages = Math.ceil(filteredBuyers.length / itemsPerPage);
-  const paginatedBuyers = filteredBuyers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  // const totalPages = Math.ceil(meta?.total / itemsPerPage);
+  // const paginatedBuyers = filteredBuyers.slice(
+  //   (currentPage - 1) * itemsPerPage,
+  //   currentPage * itemsPerPage,
+  // );
 
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -163,84 +184,89 @@ export function BuyersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginatedBuyers.map((buyer) => (
-                  <tr
-                    key={buyer.id}
-                    onClick={() => navigate(`/buyers/${buyer.id}`)}
-                    className="transition-colors cursor-pointer hover:bg-gray-50 group"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <img
-                          className="object-cover w-10 h-10 border border-gray-200 rounded-full"
-                          src={buyer.avatar}
-                          alt=""
+                {!isLoading &&
+                  buyers &&
+                  buyers?.length > 0 &&
+                  buyers?.map((buyer) => (
+                    <tr
+                      key={buyer.id}
+                      onClick={() => navigate(`/buyers/${buyer.id}`)}
+                      className="transition-colors cursor-pointer hover:bg-gray-50 group"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <img
+                            className="object-cover w-10 h-10 border border-gray-200 rounded-full"
+                            src={buyer.buyer?.profilePhotoUrl}
+                            alt=""
+                          />
+                          <div>
+                            <div className="flex items-center gap-1 text-sm font-medium text-gray-900">
+                              {buyer.buyer?.fulllName ?? "-- --"}
+                              {1 && (
+                                <ShieldCheck className="w-3 h-3 text-green-500" />
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ID: #{buyer.id}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <Mail className="w-3 h-3 text-gray-400" />
+                            {buyer.email ?? "---"}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <Phone className="w-3 h-3 text-gray-400" />
+                            {buyer.buyer?.phone ?? "N/A"}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-600">
+                            <MapPin className="w-3 h-3 text-gray-400" />
+                            {buyer?.evanAddress ? buyer.evanAddress : "N/A"}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-400">
+                            <Calendar className="w-3 h-3" />
+                            Joined {buyer.createdAt}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge
+                          status={buyer.userType.toLowerCase() as any}
                         />
-                        <div>
-                          <div className="flex items-center gap-1 text-sm font-medium text-gray-900">
-                            {buyer.name}
-                            {buyer.verified && (
-                              <ShieldCheck className="w-3 h-3 text-green-500" />
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            ID: #{buyer.id}
-                          </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                        N/A
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-gray-900">
+                          {buyer.buyer?.orderStats.totalAmount || 0}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <Mail className="w-3 h-3 text-gray-400" />
-                          {buyer.email}
+                        <div className="text-xs text-gray-500">
+                          {buyer.buyer?._count?.orders ?? 0} Orders
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <Phone className="w-3 h-3 text-gray-400" />
-                          {buyer.phone}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            to={`/buyers/${buyer.id}`}
+                            className="p-2 text-gray-400 hover:text-primary hover:bg-[#E8F3F1] rounded-lg transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <Link
+                            to="/chats"
+                            className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                          </Link>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <MapPin className="w-3 h-3 text-gray-400" />
-                          {buyer.address}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                          <Calendar className="w-3 h-3" />
-                          Joined {buyer.joinDate}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={buyer.status.toLowerCase() as any} />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                      {buyer.country}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900">
-                        {buyer.totalSpent}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {buyer.totalOrders} Orders
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/buyers/${buyer.id}`}
-                          className="p-2 text-gray-400 hover:text-primary hover:bg-[#E8F3F1] rounded-lg transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <Link
-                          to="/chats"
-                          className="p-2 text-gray-400 transition-colors rounded-lg hover:text-blue-600 hover:bg-blue-50"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -254,10 +280,9 @@ export function BuyersPage() {
               </span>{" "}
               to{" "}
               <span className="font-medium">
-                {Math.min(currentPage * itemsPerPage, filteredBuyers.length)}
+                {Math.min(currentPage * itemsPerPage, meta?.total || 0)}
               </span>{" "}
-              of <span className="font-medium">{filteredBuyers.length}</span>{" "}
-              results
+              of <span className="font-medium">{meta?.total}</span> results
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -267,7 +292,7 @@ export function BuyersPage() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              {Array.from({ length: totalPages }).map((_, i) => (
+              {Array.from({ length: Number(meta?.totalPages) }).map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
@@ -282,9 +307,11 @@ export function BuyersPage() {
               ))}
               <button
                 onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  setCurrentPage((prev) =>
+                    Math.min(prev + 1, Number(meta?.totalPages)),
+                  )
                 }
-                disabled={currentPage === totalPages}
+                disabled={currentPage === Number(meta?.totalPages)}
                 className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -293,12 +320,12 @@ export function BuyersPage() {
           </div>
         </div>
 
-        <ExportReportModal
+        {/* <ExportReportModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
-          data={filteredBuyers}
+          data={buyers}
           reportType="buyers"
-        />
+        /> */}
       </main>
     </div>
   );
