@@ -1,10 +1,8 @@
 import { IUsersListApiResponse } from "@/@types/get_all_user";
+import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
+// import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-
-/* ---------- Types ---------- */
-
-/* ---------- API ---------- */
 
 export const baseApi = createApi({
   reducerPath: "baseApi",
@@ -20,7 +18,7 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Users"],
+  tagTypes: ["Users", "Vendors"], // Add Vendors tag
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
     adminLogin: builder.mutation<AdminLoginResponse, AdminLoginRequest>({
@@ -49,28 +47,52 @@ export const baseApi = createApi({
         includeCount?: string;
       }
     >({
-      query: (params: {
-        page?: string;
-        limit?: string;
-        userType?: "buyer" | "vendor" | "user";
-        search?: string;
-        gender?: string;
-        isActive?: string;
-        vendorCode?: string;
-        sortBy?: string;
-        sortOrder?: string;
-        includeMessages?: string;
-        includeNotifications?: string;
-        includeCount?: string;
-      }) => ({
+      query: (params) => ({
         url: `/auth/user`,
         method: "GET",
         params: params,
       }),
       providesTags: ["Users"],
     }),
+
+    /* ---------- GET ALL VENDORS QUERY ---------- */
+    getAllVendors: builder.query<
+      IVendorsListApiResponse,
+      {
+        page?: string;
+        limit?: string;
+        search?: string;
+        vendorCode?: string;
+        gender?: string;
+        isActive?: string;
+        businessName?: string;
+        minRevenue?: string;
+        maxRevenue?: string;
+        minRating?: string;
+        maxRating?: string;
+        sortBy?:
+          | "createdAt"
+          | "fulllName"
+          | "storename"
+          | "revenue"
+          | "rating"
+          | "totalOrders";
+        sortOrder?: "asc" | "desc";
+      }
+    >({
+      query: (params) => ({
+        url: `/vendors`,
+        method: "GET",
+        params: params,
+      }),
+      providesTags: ["Vendors"],
+    }),
   }),
 });
 
 /* ---------- Hooks ---------- */
-export const { useAdminLoginMutation, useGetAllUsersQuery } = baseApi;
+export const {
+  useAdminLoginMutation,
+  useGetAllUsersQuery,
+  useGetAllVendorsQuery, // Add this hook
+} = baseApi;

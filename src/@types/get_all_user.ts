@@ -83,6 +83,7 @@ export type IUsersListApiResponse = {
           totalAmount: number;
           byStatus: Record<string, number>;
         };
+        revenue: number;
       };
     }>;
 
