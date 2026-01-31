@@ -19,7 +19,7 @@ export function ExportReportModal({
   reportType,
 }: ExportReportModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
-
+  console.log(data, "export report");
   if (!isOpen) return null;
 
   // Configuration for each report type
@@ -53,7 +53,7 @@ export function ExportReportModal({
         { label: "Total Buyers", value: data.length },
         {
           label: "Active Buyers",
-          value: data.filter((b) => b.buyer.orderStats.totalAmount > 1000)
+          value: data.filter((b) => b?.buyer?.orderStats?.totalAmount > 1000)
             .length,
         },
       ],
@@ -69,25 +69,24 @@ export function ExportReportModal({
     vendors: {
       title: "Vendor Directory Report",
       stats: [
-        { label: "Total Vendors", value: data.length },
+        { label: "Total Vendors", value: data?.length || 0 },
         {
           label: "Active Vendors",
-          value: data.filter((v) => v.status?.toLowerCase() === "active")
-            .length,
+          value: data.filter((v) => v.isActive === true).length,
         },
         {
           label: "Total Products",
-          value: data.reduce((sum, v) => sum + (v.products || 0), 0),
+          value: data.reduce((sum, v) => sum + (v?.counts?.products || 0), 0),
         },
       ],
-      columns: ["ID", "Name", "Category", "Country", "Status", "Revenue"],
+      columns: ["ID", "Name", "phone", "storename", "address", "Status"],
       mapRow: (v: any) => [
         v.id,
-        v.name,
-        v.category,
-        v.country,
-        v.status,
-        v.revenue,
+        v.fulllName,
+        v.phone,
+        v.storename,
+        v.address,
+        v.isActive ? "Active" : "Pending",
       ],
     },
     orders: {
@@ -96,13 +95,11 @@ export function ExportReportModal({
         { label: "Total Orders", value: data.length },
         {
           label: "Completed",
-          value: data.filter((o) => o.status?.toLowerCase() === "completed")
-            .length,
+          value: 11,
         },
         {
           label: "Pending",
-          value: data.filter((o) => o.status?.toLowerCase() === "pending")
-            .length,
+          value: 11,
         },
       ],
       columns: ["Order ID", "Date", "Customer", "Total", "Status", "Payment"],

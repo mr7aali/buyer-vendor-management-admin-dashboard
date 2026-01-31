@@ -26,7 +26,7 @@ export function VendorsPage() {
     | "rating"
     | "totalOrders"
   >("createdAt");
-  console.log(statusFilter);
+
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
