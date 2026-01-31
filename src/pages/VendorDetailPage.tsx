@@ -245,28 +245,28 @@ export function VendorDetailPage() {
 
   const documents = [
     {
-      id: "1",
-      name: "Business License.pdf",
+      key: "bussinessIdPhotoUrl",
+      name: "Business License",
       type: "License",
       uploadDate: "Jan 15, 2023",
-      status: "approved" as const,
-      url: "#",
+      status: false,
+      url: vendor?.bussinessIdPhotoUrl,
     },
     {
-      id: "2",
-      name: "Tax Registration.pdf",
+      key: "nidFontPhotoUrl",
+      name: "Tax Registration",
       type: "Tax",
       uploadDate: "Jan 15, 2023",
-      status: "approved" as const,
-      url: "#",
+      status: false,
+      url: vendor?.nidFontPhotoUrl,
     },
     {
-      id: "3",
-      name: "Identity Proof.jpg",
+      key: "nidBackPhotoUrl",
+      name: "Identity Proof",
       type: "ID",
       uploadDate: "Jan 16, 2023",
-      status: "pending" as const,
-      url: "#",
+      status: false,
+      url: vendor?.nidBackPhotoUrl,
     },
   ];
 
@@ -372,10 +372,7 @@ export function VendorDetailPage() {
         </button>
 
         {/* Header Card */}
-        <div
-          className="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-2xl"
-          style={{ border: "1px solid red" }}
-        >
+        <div className="p-6 mb-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
           <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
             <div className="flex-shrink-0 w-20 h-20 p-1 border border-gray-100 rounded-xl bg-gray-50">
               <img
@@ -551,10 +548,7 @@ export function VendorDetailPage() {
                     </div>
                   )}
                   {vendor?.website && (
-                    <div
-                      className="p-4 bg-gray-50 rounded-xl"
-                      style={{ border: "1px solid red" }}
-                    >
+                    <div className="p-4 bg-gray-50 rounded-xl">
                       <div className="mb-1 text-sm text-gray-500">Website</div>
                       <div className="flex items-center gap-2 font-medium text-gray-900">
                         <Globe className="w-4 h-4 text-gray-400" />
@@ -573,7 +567,10 @@ export function VendorDetailPage() {
               </div>
 
               {/* KYC Documents */}
-              <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
+              <div
+                className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl"
+                style={{ border: "1px solid red" }}
+              >
                 <h3 className="mb-4 text-lg font-bold text-gray-900">
                   Verification Status
                 </h3>
