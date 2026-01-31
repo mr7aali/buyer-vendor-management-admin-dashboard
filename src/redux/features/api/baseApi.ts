@@ -2,6 +2,7 @@ import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
 // import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
+import { ISingleVendorResponse } from "@/@types/vendor_details_response_type";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const baseApi = createApi({
@@ -87,6 +88,14 @@ export const baseApi = createApi({
       }),
       providesTags: ["Vendors"],
     }),
+    getSingleVendorsById: builder.query<ISingleVendorResponse, { id: string }>({
+      query: (params: { id: string }) => ({
+        url: `/auth/vendor/${params.id}`,
+        method: "GET",
+        params: params,
+      }),
+      providesTags: ["Vendors"],
+    }),
   }),
 });
 
@@ -95,4 +104,5 @@ export const {
   useAdminLoginMutation,
   useGetAllUsersQuery,
   useGetAllVendorsQuery, // Add this hook
+  useGetSingleVendorsByIdQuery,
 } = baseApi;

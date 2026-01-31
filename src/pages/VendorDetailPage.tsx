@@ -28,6 +28,7 @@ import {
   Filter,
   AlertCircle,
 } from "lucide-react";
+import { useGetSingleVendorsByIdQuery } from "@/redux/features/api/baseApi";
 
 // Interfaces
 interface Product {
@@ -66,6 +67,12 @@ interface Order {
 export function VendorDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+
+  const { data } = useGetSingleVendorsByIdQuery(
+    { id: id || "" },
+    { skip: !id, refetchOnMountOrArgChange: true },
+  );
+  console.log(data);
   const [activeTab, setActiveTab] = useState<
     "overview" | "products" | "orders"
   >("overview");
