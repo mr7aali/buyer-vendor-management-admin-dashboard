@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { FileText, Download, Check, X, Eye } from "lucide-react";
 interface Document {
-  id: string;
+  key: string;
   name: string;
   type: string;
   uploadDate: string;
@@ -44,9 +44,9 @@ export function DocumentViewer({
         <div className="flex-1 p-2 space-y-2 overflow-y-auto">
           {documents.map((doc) => (
             <div
-              key={doc.id}
+              key={doc.key}
               onClick={() => setSelectedDoc(doc)}
-              className={`p-3 rounded-xl border cursor-pointer transition-all ${selectedDoc?.id === doc.id ? "border-[#278687] bg-[#E8F3F1]/50 shadow-sm" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"}`}
+              className={`p-3 rounded-xl border cursor-pointer transition-all ${selectedDoc?.key === doc.key ? "border-[#278687] bg-[#E8F3F1]/50 shadow-sm" : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"}`}
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-white border border-gray-100 rounded-lg">
@@ -73,7 +73,12 @@ export function DocumentViewer({
       <div className="flex flex-col overflow-hidden bg-white border border-gray-100 shadow-sm lg:col-span-2 rounded-2xl">
         {selectedDoc ? (
           <>
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+            <div
+              className="flex items-center justify-between p-4 border-b border-gray-100"
+              onClick={() => {
+                console.log(selectedDoc);
+              }}
+            >
               <div>
                 <h3 className="font-semibold text-gray-900">
                   {selectedDoc.name}
@@ -93,20 +98,29 @@ export function DocumentViewer({
                 </span>
               </div>
               <div className="flex gap-2">
-                <button className="p-2 text-gray-500 transition-colors rounded-lg hover:text-gray-900 hover:bg-gray-50">
+                <button
+                  onClick={() =>
+                    console.log(
+                      selectedDoc.status === false &&
+                        selectedDoc.url &&
+                        selectedDoc.url?.length > 3,
+                    )
+                  }
+                  className="p-2 text-gray-500 transition-colors rounded-lg hover:text-gray-900 hover:bg-gray-50"
+                >
                   <Download className="w-5 h-5" />
                 </button>
-                {selectedDoc.status && !selectedDoc.url && (
+                {!selectedDoc.status && (
                   <>
                     <button
-                      onClick={() => handleRejectClick(selectedDoc.id)}
+                      onClick={() => handleRejectClick(selectedDoc.key)}
                       className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 transition-colors rounded-lg bg-red-50 hover:bg-red-100"
                     >
                       <X className="w-4 h-4" />
                       Reject
                     </button>
                     <button
-                      onClick={() => onApprove(selectedDoc.id)}
+                      onClick={() => onApprove(selectedDoc.key)}
                       className="flex items-center gap-2 px-3 py-2 bg-[#278687] text-white hover:bg-[#1e6b6c] rounded-lg text-sm font-medium transition-colors shadow-sm"
                     >
                       <Check className="w-4 h-4" />
@@ -116,16 +130,45 @@ export function DocumentViewer({
                 )}
               </div>
             </div>
-            <div className="flex items-center justify-center flex-1 p-8 bg-gray-50">
-              {/* Placeholder for actual document preview */}
-              <div className="text-center">
-                <FileText className="w-24 h-24 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500">Document Preview</p>
-                <button className="flex items-center gap-2 px-4 py-2 mx-auto mt-4 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <Eye className="w-4 h-4" />
-                  Open in New Tab
-                </button>
-              </div>
+            <div className="flex-1 overflow-hidden bg-gray-50">
+              {selectedDoc.url ? (
+                selectedDoc.url.endsWith(".pdf") ? (
+                  // PDF Preview
+                  <iframe
+                    src={selectedDoc.url}
+                    title="Document Preview"
+                    className="w-full h-full border-0"
+                  />
+                ) : selectedDoc.url.match(/\.(jpg|jpeg|png|webp)$/i) ? (
+                  // Image Preview
+                  <div className="flex items-center justify-center h-full p-4">
+                    <img
+                      src={selectedDoc.url}
+                      alt={selectedDoc.name}
+                      className="max-w-full max-h-full rounded-lg shadow"
+                    />
+                  </div>
+                ) : (
+                  // Fallback
+                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                    <FileText className="w-24 h-24 mb-4 text-gray-300" />
+                    <p>Preview not available</p>
+                    <a
+                      href={selectedDoc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2 mt-4 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Open in New Tab
+                    </a>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  No document uploaded
+                </div>
+              )}
             </div>
           </>
         ) : (
