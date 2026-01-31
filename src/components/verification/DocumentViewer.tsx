@@ -34,6 +34,8 @@ export function DocumentViewer({
       setDocToReject(null);
     }
   };
+  // ;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
       {/* Document List */}
@@ -73,12 +75,7 @@ export function DocumentViewer({
       <div className="flex flex-col overflow-hidden bg-white border border-gray-100 shadow-sm lg:col-span-2 rounded-2xl">
         {selectedDoc ? (
           <>
-            <div
-              className="flex items-center justify-between p-4 border-b border-gray-100"
-              onClick={() => {
-                console.log(selectedDoc);
-              }}
-            >
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <div>
                 <h3 className="font-semibold text-gray-900">
                   {selectedDoc.name}
@@ -86,8 +83,6 @@ export function DocumentViewer({
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${selectedDoc.status ? "bg-green-100 text-green-800" : selectedDoc.status === false && selectedDoc.url && selectedDoc.url?.length > 3 ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
                 >
-                  {/* {selectedDoc.status.charAt(0).toUpperCase() +
-                    selectedDoc.status.slice(1)} */}
                   {selectedDoc.status
                     ? "Active"
                     : selectedDoc.status === false &&

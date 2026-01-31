@@ -15,21 +15,19 @@ import {
   ExternalLink,
   ArrowLeft,
   Package,
-  Truck,
-  Clock,
   Phone,
   Globe,
   DollarSign,
-  Users,
   TrendingUp,
   ChevronRight,
   ChevronLeft,
   Search,
-  Filter,
-  AlertCircle,
   Hash,
 } from "lucide-react";
-import { useGetSingleVendorsByIdQuery } from "@/redux/features/api/baseApi";
+import {
+  useGetSingleVendorsByIdQuery,
+  useUpdateVendorMutation,
+} from "@/redux/features/api/baseApi";
 
 // Interfaces
 interface Product {
@@ -245,28 +243,28 @@ export function VendorDetailPage() {
 
   const documents = [
     {
-      key: "bussinessIdPhotoUrl",
-      name: "Business License",
+      key: "isBussinessIdVerified",
+      name: "Business License ",
       type: "License",
-      uploadDate: "Jan 15, 2023",
-      status: false,
-      url: vendor?.bussinessIdPhotoUrl,
+      uploadDate: vendor?.createdAt || "",
+      status: vendor?.isBussinessIdVerified || false,
+      url: vendor?.bussinessIdPhotoUrl || "",
     },
     {
-      key: "nidFontPhotoUrl",
-      name: "Tax Registration",
-      type: "Tax",
-      uploadDate: "Jan 15, 2023",
-      status: false,
-      url: vendor?.nidFontPhotoUrl,
-    },
-    {
-      key: "nidBackPhotoUrl",
+      key: "isNidVerify",
       name: "Identity Proof",
-      type: "ID",
-      uploadDate: "Jan 16, 2023",
-      status: false,
-      url: vendor?.nidBackPhotoUrl,
+      type: "NID",
+      uploadDate: vendor?.createdAt || "",
+      status: vendor?.isNidVerify || false,
+      url: vendor?.nidFontPhotoUrl || "",
+    },
+    {
+      key: "isNidVerify_",
+      name: "Identity Proof",
+      type: "NID",
+      uploadDate: vendor?.createdAt || "",
+      status: vendor?.isNidVerify || false,
+      url: vendor?.nidBackPhotoUrl || "",
     },
   ];
 
@@ -290,7 +288,8 @@ export function VendorDetailPage() {
         return "bg-gray-100 text-gray-700";
     }
   };
-
+  const [updateVendor, { isLoading: vendorDataUpdaing }] =
+    useUpdateVendorMutation();
   // Products Logic
   const filteredProducts = products.filter((product) => {
     if (selectedCategory && product.category !== selectedCategory) return false;
@@ -567,18 +566,78 @@ export function VendorDetailPage() {
               </div>
 
               {/* KYC Documents */}
-              <div
-                className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl"
-                style={{ border: "1px solid red" }}
-              >
+              <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <h3 className="mb-4 text-lg font-bold text-gray-900">
                   Verification Status
                 </h3>
                 <div className="mb-6">
                   <DocumentViewer
                     documents={documents}
-                    onApprove={(id) => console.log("Approve", id)}
-                    onReject={(id, reason) => console.log("Reject", id, reason)}
+                    onApprove={async (key) => {
+                      if (!id) return;
+
+                      try {
+                        if (key === "isNidVerify" || key === "isNidVerify_") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isNidVerify: true,
+                            },
+                          }).unwrap();
+
+                          // Optional: Show success toast/notification
+                          console.log("NID verification approved successfully");
+                        } else if (key === "isBussinessIdVerified") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isBussinessIdVerified: true,
+                            },
+                          }).unwrap();
+
+                          // Optional: Show success toast/notification
+                          console.log(
+                            "Business ID verification approved successfully",
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Failed to approve document:", error);
+                        // Optional: Show error toast/notification
+                      }
+                    }}
+                    onReject={async (key, reason) => {
+                      if (!id) return;
+
+                      try {
+                        if (key === "isNidVerify" || key === "isNidVerify_") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isNidVerify: false,
+                            },
+                          }).unwrap();
+
+                          console.log("NID verification rejected:", reason);
+                        } else if (key === "isBussinessIdVerified") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isBussinessIdVerified: false,
+                            },
+                          }).unwrap();
+
+                          console.log(
+                            "Business ID verification rejected:",
+                            reason,
+                          );
+                        }
+
+                        // Optional: You might want to send the rejection reason to the backend
+                        // This would require adding a new field in the database or sending a notification
+                      } catch (error) {
+                        console.error("Failed to reject document:", error);
+                      }
+                    }}
                   />
                 </div>
               </div>

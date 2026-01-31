@@ -2,7 +2,11 @@ import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
 // import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
-import { ISingleVendorResponse } from "@/@types/vendor_details_response_type";
+import {
+  ISingleVendorResponse,
+  UpdateVendorRequest,
+  UpdateVendorResponse,
+} from "@/@types/vendor_details_response_type";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const baseApi = createApi({
@@ -92,9 +96,21 @@ export const baseApi = createApi({
       query: (params: { id: string }) => ({
         url: `/auth/vendor/${params.id}`,
         method: "GET",
-        params: params,
+        // params: params,
       }),
       providesTags: ["Vendors"],
+    }),
+    /* ---------- UPDATE VENDOR MUTATION ---------- */
+    updateVendor: builder.mutation<UpdateVendorResponse, UpdateVendorRequest>({
+      query: ({ id, data }: UpdateVendorRequest) => ({
+        url: `/auth/vendor/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendors", id },
+        "Vendors",
+      ],
     }),
   }),
 });
@@ -105,4 +121,5 @@ export const {
   useGetAllUsersQuery,
   useGetAllVendorsQuery, // Add this hook
   useGetSingleVendorsByIdQuery,
+  useUpdateVendorMutation,
 } = baseApi;

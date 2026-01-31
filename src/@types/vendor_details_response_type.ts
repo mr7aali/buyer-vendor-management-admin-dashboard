@@ -19,7 +19,8 @@ export type ISingleVendorResponse = {
 
     gender: "male" | "female" | "other" | string;
     nationalIdNumber: string;
-
+    isNidVerify: boolean;
+    isBussinessIdVerified: boolean;
     bussinessRegNumber: string | null;
     bussinessIdPhotoUrl: string;
     nidFontPhotoUrl: string;
@@ -77,4 +78,60 @@ export type VendorCounts = {
   coupons: number;
   messages: number;
   connections: number;
+};
+
+// Add this type for the update vendor request
+export type UpdateVendorRequest = {
+  id: string;
+  data: {
+    fulllName?: string;
+    phone?: string;
+    address?: string;
+    storename?: string;
+    storeDescription?: string;
+    gender?: string;
+    businessName?: string;
+    businessDescription?: string;
+    website?: string;
+    isActive?: boolean;
+    isNidVerify?: boolean;
+    isBussinessIdVerified?: boolean;
+  };
+};
+
+// Add this type for the update vendor response
+export type UpdateVendorResponse = {
+  success: boolean;
+  message: string;
+  vendor: {
+    id: string;
+    userId: string;
+    vendorCode: string;
+    fulllName: string;
+    phone: string;
+    address: string;
+    storename: string;
+    storeDescription: string;
+    gender: string;
+    businessName: string | null;
+    businessDescription: string | null;
+    logoUrl: string;
+    nationalIdNumber: string;
+    nidFontPhotoUrl: string;
+    nidBackPhotoUrl: string;
+    isNidVerify: boolean;
+    bussinessRegNumber: string;
+    bussinessIdPhotoUrl: string;
+    isBussinessIdVerified: boolean;
+    website: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+    user: {
+      id: string;
+      email: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+  };
 };
