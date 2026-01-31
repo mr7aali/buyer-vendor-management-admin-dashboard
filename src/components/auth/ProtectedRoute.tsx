@@ -28,7 +28,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Check if user has permission for the current route
   // We strip the trailing slash for consistency
   const currentPath = location.pathname;
-  console.log(currentPath);
+
   if (!checkPermission(currentPath)) {
     // If user is authenticated but doesn't have permission, redirect to their dashboard or show 403
     // For now, redirect to root which should handle their dashboard view
