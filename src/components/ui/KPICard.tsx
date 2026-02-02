@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 interface KPICardProps {
   title: string;
-  value: number;
+  value: number | string;
   change: number;
   icon: LucideIcon;
   linkText?: string;
