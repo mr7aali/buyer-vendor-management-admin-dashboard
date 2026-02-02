@@ -1,3 +1,4 @@
+import { DashboardApiResponse } from "@/@types/admin_dashboard";
 import { baseApi } from "./baseApi";
 
 /* =======================
@@ -60,7 +61,7 @@ export const dashboardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     /* -------- Dashboard Overview -------- */
     getDashboardOverview: builder.query<
-      DashboardOverviewResponse,
+      DashboardApiResponse,
       {
         days?: number;
         includeCharts?: boolean;

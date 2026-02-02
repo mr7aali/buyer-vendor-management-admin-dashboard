@@ -1,15 +1,15 @@
-import React from 'react';
-import { ArrowRight, TrendingUp, TrendingDown, LucideIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { ArrowRight, TrendingUp, TrendingDown, LucideIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface KPICardProps {
   title: string;
-  value: string;
+  value: number;
   change: number;
   icon: LucideIcon;
   linkText?: string;
   linkTo?: string;
-  trend?: 'up' | 'down';
+  trend?: "up" | "down";
 }
 
 export function KPICard({
@@ -17,38 +17,43 @@ export function KPICard({
   value,
   change,
   icon: Icon,
-  linkText = 'View Details',
-  linkTo = '#',
-  trend
+  linkText = "View Details",
+  linkTo = "#",
+  trend,
 }: KPICardProps) {
   const isPositive = change >= 0;
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
 
   return (
     <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-md transition-shadow duration-200 flex flex-col h-full border border-gray-100">
-      <div className="flex justify-between items-start mb-4">
+      <div className="mb-4 flex items-start justify-between">
         <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-1">{title}</h3>
+          <h3 className="mb-1 text-sm font-medium text-gray-500">{title}</h3>
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold text-gray-900 tracking-tight">
+            <span className="text-3xl font-bold tracking-tight text-gray-900">
               {value}
             </span>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isPositive ? 'bg-[#B4E34D]/20 text-green-800' : 'bg-red-100 text-red-700'}`}>
-              {isPositive ? '+' : ''}
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${isPositive ? "bg-[#B4E34D]/20 text-green-800" : "bg-red-100 text-red-700"}`}
+            >
+              {isPositive ? "+" : ""}
               {change}%
-              <TrendIcon className="w-3 h-3 ml-1" />
+              <TrendIcon className="ml-1 h-3 w-3" />
             </span>
           </div>
         </div>
-        <div className="p-2 bg-gray-50 rounded-full border border-gray-100">
-          <Icon className="w-5 h-5 text-gray-600" />
+        <div className="rounded-full border border-gray-100 bg-gray-50 p-2">
+          <Icon className="h-5 w-5 text-gray-600" />
         </div>
       </div>
 
-      <div className="mt-auto pt-4 border-t border-gray-50">
-        <Link to={linkTo} className="group flex items-center text-sm font-medium text-gray-600 hover:text-primary transition-colors">
+      <div className="mt-auto border-t border-gray-50 pt-4">
+        <Link
+          to={linkTo}
+          className="group flex items-center text-sm font-medium text-gray-600 transition-colors hover:text-primary"
+        >
           {linkText}
-          <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+          <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
         </Link>
       </div>
     </div>
