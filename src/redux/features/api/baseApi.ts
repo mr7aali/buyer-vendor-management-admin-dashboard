@@ -2,6 +2,7 @@ import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
 // import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
+import { OrderListResponse } from "@/@types/oder";
 import {
   ISingleVendorResponse,
   UpdateVendorRequest,
@@ -23,7 +24,7 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Users", "Vendors"], // Add Vendors tag
+  tagTypes: ["Users", "Vendors", "Orders"], // Add Vendors tag
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
     adminLogin: builder.mutation<AdminLoginResponse, AdminLoginRequest>({
@@ -112,6 +113,18 @@ export const baseApi = createApi({
         "Vendors",
       ],
     }),
+    /* ---------- ORDER MUTATION ---------- */
+    getAllOrders: builder.query<
+      OrderListResponse,
+      { page?: number; limit?: number; search?: string; status?: string }
+    >({
+      query: (params) => ({
+        url: "/orders/get-all",
+        method: "GET",
+        params,
+      }),
+      providesTags: ["Orders"],
+    }),
   }),
 });
 
@@ -122,4 +135,5 @@ export const {
   useGetAllVendorsQuery, // Add this hook
   useGetSingleVendorsByIdQuery,
   useUpdateVendorMutation,
+  useGetAllOrdersQuery,
 } = baseApi;
