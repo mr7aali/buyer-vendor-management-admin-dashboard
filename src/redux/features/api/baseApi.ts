@@ -1,6 +1,6 @@
 import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
-import { OrderResponse } from "@/@types/get_single_user";
+import { OrderResponse } from "@/@types/get_single_orders";
 // import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
 import { OrderListResponse } from "@/@types/oder";
@@ -142,4 +142,5 @@ export const {
   useGetSingleVendorsByIdQuery,
   useUpdateVendorMutation,
   useGetAllOrdersQuery,
+  useGetAdminOrderDetailsQuery,
 } = baseApi;

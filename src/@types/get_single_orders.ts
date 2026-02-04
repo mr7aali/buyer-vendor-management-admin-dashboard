@@ -32,6 +32,7 @@ export type OrderResponse = {
         imageUrl: string;
         vendorId: string;
         categoryId: string;
+        images: string[];
       };
     }>;
     buyer: {
