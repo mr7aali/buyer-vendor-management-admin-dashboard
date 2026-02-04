@@ -1,5 +1,6 @@
 import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
+import { AdminUserDetailsResponse } from "@/@types/get_single_buyer";
 import { OrderResponse } from "@/@types/get_single_orders";
 // import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
@@ -131,6 +132,10 @@ export const baseApi = createApi({
       // providesTags: (result, error, id) => [{ type: "Order", id }],
       providesTags: ["Orders"],
     }),
+    getAdminUserDetails: builder.query<AdminUserDetailsResponse, string>({
+      query: (id) => `/auth/admin/users/${id}`,
+      providesTags: ["Users"],
+    }),
   }),
 });
 
@@ -143,4 +148,5 @@ export const {
   useUpdateVendorMutation,
   useGetAllOrdersQuery,
   useGetAdminOrderDetailsQuery,
+  useGetAdminUserDetailsQuery,
 } = baseApi;

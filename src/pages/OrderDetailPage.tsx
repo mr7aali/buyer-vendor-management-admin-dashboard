@@ -253,9 +253,9 @@ export function OrderDetailPage() {
             </div>
 
             {/* Delivery Tracking */}
-            <div style={{ border: "1px solid red" }}>
+            {/* <div style={{ border: "1px solid red" }}>
               <DeliveryTracker />
-            </div>
+            </div> */}
           </div>
 
           {/* Sidebar */}
