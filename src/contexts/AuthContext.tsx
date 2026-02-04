@@ -9,6 +9,10 @@ export interface Admin {
   email: string;
   role: string; // SUPER_ADMIN | STAFF | SUB_ADMIN
   permissions: string[]; // route-based permissions
+  fullName: string;
+  avatar: string;
+  updatedAt: string;
+  createdAt: string;
 }
 
 interface AuthContextType {

@@ -1,3 +1,4 @@
+import { AdminMeResponse } from "@/@types/admin_profile_data";
 import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
 import { AdminUserDetailsResponse } from "@/@types/get_single_buyer";
@@ -26,7 +27,7 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Users", "Vendors", "Orders"], // Add Vendors tag
+  tagTypes: ["Users", "Vendors", "Orders", "Admin"], // Add Vendors tag
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
     adminLogin: builder.mutation<AdminLoginResponse, AdminLoginRequest>({
@@ -136,6 +137,10 @@ export const baseApi = createApi({
       query: (id) => `/auth/admin/users/${id}`,
       providesTags: ["Users"],
     }),
+    getAdminMe: builder.query<AdminMeResponse, void>({
+      query: () => "/auth/admin/me",
+      providesTags: ["Admin"],
+    }),
   }),
 });
 
@@ -149,4 +154,5 @@ export const {
   useGetAllOrdersQuery,
   useGetAdminOrderDetailsQuery,
   useGetAdminUserDetailsQuery,
+  useGetAdminMeQuery,
 } = baseApi;
