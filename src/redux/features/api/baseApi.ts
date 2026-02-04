@@ -1,5 +1,6 @@
 import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
+import { OrderResponse } from "@/@types/get_single_user";
 // import { IVendorsListApiResponse } from "@/@types/get_all_vendors"; // Add this type
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
 import { OrderListResponse } from "@/@types/oder";
@@ -123,6 +124,11 @@ export const baseApi = createApi({
         method: "GET",
         params,
       }),
+      providesTags: ["Orders"],
+    }),
+    getAdminOrderDetails: builder.query<OrderResponse, string>({
+      query: (id) => `/orders/admin-order-details/${id}`,
+      // providesTags: (result, error, id) => [{ type: "Order", id }],
       providesTags: ["Orders"],
     }),
   }),

@@ -11,31 +11,9 @@ import { KPICard } from "./ui/KPICard";
 import { Link } from "react-router-dom";
 import { RevenueChart } from "./charts/RevenueChart";
 import { UserGrowthChart } from "./charts/UserGrowthChart";
-import {
-  useGetDashboardKPIQuery,
-  useGetDashboardOverviewQuery,
-} from "@/redux/features/api/dashboardApi";
+import { useGetDashboardOverviewQuery } from "@/redux/features/api/dashboardApi";
 
 // Dashboard-specific mock data
-const WEEKLY_REVENUE_DATA = [
-  { name: "Mon", revenue: 4000, profit: 2400 },
-  { name: "Tue", revenue: 3000, profit: 1398 },
-  { name: "Wed", revenue: 2000, profit: 9800 },
-  { name: "Thu", revenue: 2780, profit: 3908 },
-  { name: "Fri", revenue: 1890, profit: 4800 },
-  { name: "Sat", revenue: 2390, profit: 3800 },
-  { name: "Sun", revenue: 3490, profit: 4300 },
-];
-
-const WEEKLY_USER_DATA = [
-  { name: "Mon", buyers: 400, vendors: 240 },
-  { name: "Tue", buyers: 300, vendors: 139 },
-  { name: "Wed", buyers: 200, vendors: 980 },
-  { name: "Thu", buyers: 278, vendors: 390 },
-  { name: "Fri", buyers: 189, vendors: 480 },
-  { name: "Sat", buyers: 239, vendors: 380 },
-  { name: "Sun", buyers: 349, vendors: 430 },
-];
 
 export function AdminDashboard() {
   const { data, isLoading } = useGetDashboardOverviewQuery();
