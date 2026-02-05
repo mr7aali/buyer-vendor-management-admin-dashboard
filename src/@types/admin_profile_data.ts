@@ -19,7 +19,7 @@ type AdminProfile = {
   fullName: string;
   id: number;
   role: AdminRole | string;
-  permissions: AdminPermission[];
+  permissions: string[];
   _count: {
     permissions: number;
   };
