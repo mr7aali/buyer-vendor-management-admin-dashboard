@@ -221,10 +221,7 @@ export function AdminDashboard() {
         </div>
 
         <div className="hidden">
-          <div
-            className="grid grid-cols-12 gap-8"
-            style={{ border: "1px solid red" }}
-          >
+          <div className="grid grid-cols-12 gap-8">
             {/* Recent Activity Feed */}
             <div className="col-span-12 flex lg:col-span-8">
               <div className="h-full w-full rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">

@@ -125,7 +125,6 @@ export function Header() {
     <>
       <header
         className={`sticky top-0 z-40 w-full transition-all duration-300 ${isScrolled ? "bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm" : "bg-transparent border-b border-transparent"}`}
-        style={{ border: "1px solid red" }}
       >
         <div className="relative flex h-16 items-center justify-between px-6">
           {/* Left: Menu & Search */}
