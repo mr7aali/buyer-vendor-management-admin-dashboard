@@ -47,3 +47,15 @@ export type UpdateAdminProfileResponse = {
   message: string;
   data: AdminProfile;
 };
+
+export type ChangeAdminPasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+export type ChangeAdminPasswordResponse = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};

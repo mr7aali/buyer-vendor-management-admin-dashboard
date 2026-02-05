@@ -1,5 +1,7 @@
 import {
   AdminMeResponse,
+  ChangeAdminPasswordRequest,
+  ChangeAdminPasswordResponse,
   UpdateAdminProfileRequest,
   UpdateAdminProfileResponse,
 } from "@/@types/admin_profile_data";
@@ -165,6 +167,16 @@ export const baseApi = createApi({
       },
       invalidatesTags: ["Admin"],
     }),
+    changeAdminPassword: builder.mutation<
+      ChangeAdminPasswordResponse,
+      ChangeAdminPasswordRequest
+    >({
+      query: (body) => ({
+        url: "/auth/change-admin-password",
+        method: "PATCH",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -180,4 +192,5 @@ export const {
   useGetAdminUserDetailsQuery,
   useGetAdminMeQuery,
   useUpdateAdminProfileMutation,
+  useChangeAdminPasswordMutation,
 } = baseApi;

@@ -2,12 +2,21 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/dashboard/Header";
 import { useAuth } from "../contexts/AuthContext";
 import { User, Mail, Shield, Save, Lock } from "lucide-react";
-import { useUpdateAdminProfileMutation } from "@/redux/features/api/baseApi";
+import { formatDistanceToNow } from "date-fns";
+
+import {
+  useChangeAdminPasswordMutation,
+  useUpdateAdminProfileMutation,
+} from "@/redux/features/api/baseApi";
 export function AccountPage() {
   const { admin: user, updateAdmin } = useAuth();
   const [updateAdminProfile, { isLoading: isUpdating }] =
     useUpdateAdminProfileMutation();
-
+  const [changeAdminPassword, { isLoading: isPasswordUpdating }] =
+    useChangeAdminPasswordMutation();
+  const lastUpdated = user?.updatedAt
+    ? formatDistanceToNow(new Date(user.updatedAt), { addSuffix: true })
+    : "N/A";
   const isAdmin = user?.role !== "Admin";
   const [isEditing, setIsEditing] = useState(false);
   const [formValues, setFormValues] = useState({
@@ -17,10 +26,18 @@ export function AccountPage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState(
     user?.avatar ||
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isPasswordEditing, setIsPasswordEditing] = useState(false);
+  const [passwordValues, setPasswordValues] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -30,7 +47,7 @@ export function AccountPage() {
     });
     setAvatarPreview(
       user.avatar ||
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
     );
   }, [user]);
 
@@ -72,12 +89,44 @@ export function AccountPage() {
       setAvatarFile(null);
       setAvatarPreview(
         updated.avatar ||
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
       );
       setIsEditing(false);
       setSuccessMessage("Profile updated successfully.");
     } catch (error) {
       setErrorMessage("Failed to update profile. Please try again.");
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!passwordValues.currentPassword || !passwordValues.newPassword) {
+      setPasswordError("Please fill out all password fields.");
+      return;
+    }
+
+    if (passwordValues.newPassword !== passwordValues.confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      await changeAdminPassword({
+        currentPassword: passwordValues.currentPassword,
+        newPassword: passwordValues.newPassword,
+        confirmPassword: passwordValues.confirmPassword,
+      }).unwrap();
+      setPasswordValues({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setIsPasswordEditing(false);
+      setPasswordSuccess("Password updated successfully.");
+    } catch (error) {
+      setPasswordError("Failed to update password. Please try again.");
     }
   };
 
@@ -209,7 +258,7 @@ export function AccountPage() {
                         setAvatarFile(null);
                         setAvatarPreview(
                           user?.avatar ||
-                            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
                         );
                         setErrorMessage(null);
                         setSuccessMessage(null);
@@ -254,23 +303,106 @@ export function AccountPage() {
                         Password
                       </h4>
                       <p className="mb-4 text-xs text-gray-500">
-                        Last changed 3 months ago
+                        <p>Last profile changed {lastUpdated}</p>
                       </p>
-                      <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50">
-                        <Lock className="h-4 w-4" />
-                        Change Password
-                      </button>
-                    </div>
-                    <div>
-                      <h4 className="mb-2 text-sm font-medium text-gray-900">
-                        Two-Factor Auth
-                      </h4>
-                      <p className="mb-4 text-xs text-gray-500">
-                        Add an extra layer of security
-                      </p>
-                      <button className="w-full px-4 py-2 bg-[#278687]/10 text-[#278687] rounded-lg text-sm font-medium hover:bg-[#278687]/20 transition-colors">
-                        Enable 2FA
-                      </button>
+                      {!isPasswordEditing ? (
+                        <button
+                          onClick={() => {
+                            setIsPasswordEditing(true);
+                            setPasswordError(null);
+                            setPasswordSuccess(null);
+                          }}
+                          className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                        >
+                          <Lock className="h-4 w-4" />
+                          Change Password
+                        </button>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="mb-2 block text-xs font-medium text-gray-700">
+                              Current Password
+                            </label>
+                            <input
+                              type="password"
+                              value={passwordValues.currentPassword}
+                              onChange={(event) =>
+                                setPasswordValues((prev) => ({
+                                  ...prev,
+                                  currentPassword: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#278687] focus:outline-none focus:ring-2 focus:ring-[#278687]/20"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-xs font-medium text-gray-700">
+                              New Password
+                            </label>
+                            <input
+                              type="password"
+                              value={passwordValues.newPassword}
+                              onChange={(event) =>
+                                setPasswordValues((prev) => ({
+                                  ...prev,
+                                  newPassword: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#278687] focus:outline-none focus:ring-2 focus:ring-[#278687]/20"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-xs font-medium text-gray-700">
+                              Confirm Password
+                            </label>
+                            <input
+                              type="password"
+                              value={passwordValues.confirmPassword}
+                              onChange={(event) =>
+                                setPasswordValues((prev) => ({
+                                  ...prev,
+                                  confirmPassword: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#278687] focus:outline-none focus:ring-2 focus:ring-[#278687]/20"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setIsPasswordEditing(false);
+                                setPasswordValues({
+                                  currentPassword: "",
+                                  newPassword: "",
+                                  confirmPassword: "",
+                                });
+                                setPasswordError(null);
+                                setPasswordSuccess(null);
+                              }}
+                              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={handlePasswordSave}
+                              disabled={isPasswordUpdating}
+                              className="flex-1 rounded-lg bg-[#278687] px-3 py-2 text-xs font-medium text-white hover:bg-[#1e6b6c] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isPasswordUpdating ? "Saving..." : "Update"}
+                            </button>
+                          </div>
+                          {passwordError && (
+                            <p className="text-xs text-red-600">
+                              {passwordError}
+                            </p>
+                          )}
+                          {passwordSuccess && (
+                            <p className="text-xs text-green-600">
+                              {passwordSuccess}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
