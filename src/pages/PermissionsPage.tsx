@@ -1,69 +1,132 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Header } from "../components/dashboard/Header";
-import { Shield, Plus, Trash2, Edit2, Check } from "lucide-react";
-import { APP_PAGES } from "../utils/permissions";
+import { Shield, Plus, Trash2, Check } from "lucide-react";
+import {
+  useCreateAdminEmployeeMutation,
+  useGetAdminEmployeesQuery,
+  useUpdateAdminEmployeePermissionsMutation,
+} from "@/redux/features/api/baseApi";
+import { AdminEmployee } from "@/@types/admin_employee";
 export function PermissionsPage() {
-  const [users, setUsers] = useState([
-    {
-      id: "1",
-      email: "steve.r@scan2trade.com",
-      role: "Admin",
-      permissions: APP_PAGES.map((p) => p.path),
-    },
-    {
-      id: "2",
-      email: "natasha.r@scan2trade.com",
-      role: "SubAdmin",
-      permissions: ["/", "/orders", "/products"],
-    },
-    {
-      id: "3",
-      email: "bruce.b@scan2trade.com",
-      role: "Staff",
-      permissions: ["/orders", "/chats"],
-    },
-  ]);
+  const { data } = useGetAdminEmployeesQuery();
+  const [createEmployee] = useCreateAdminEmployeeMutation();
+  const [updatePermissions] = useUpdateAdminEmployeePermissionsMutation();
+
+  const [users, setUsers] = useState<AdminEmployee[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
     password: "",
-    role: "Staff",
   });
+
+  const permissions = [
+    { key: "dashboard.view", name: "View Dashboard", description: "" },
+    { key: "analytics.view", name: "View Analytics", description: "" },
+    { key: "buyers.view", name: "View Buyers", description: "" },
+    { key: "buyers.create", name: "Create Buyer", description: "" },
+    { key: "buyers.edit", name: "Edit Buyer", description: "" },
+    { key: "buyers.delete", name: "Delete Buyer", description: "" },
+    { key: "vendors.view", name: "View Vendors", description: "" },
+    { key: "vendors.create", name: "Create Vendor", description: "" },
+    { key: "vendors.edit", name: "Edit Vendor", description: "" },
+    { key: "vendors.delete", name: "Delete Vendor", description: "" },
+    { key: "orders.view", name: "View Orders", description: "" },
+    { key: "orders.edit", name: "Edit Orders", description: "" },
+    { key: "orders.cancel", name: "Cancel Orders", description: "" },
+    { key: "transactions.view", name: "View Transactions", description: "" },
+    {
+      key: "transactions.refund",
+      name: "Refund Transactions",
+      description: "",
+    },
+    { key: "verification.view", name: "View Verifications", description: "" },
+    {
+      key: "verification.approve",
+      name: "Approve Verification",
+      description: "",
+    },
+    {
+      key: "verification.reject",
+      name: "Reject Verification",
+      description: "",
+    },
+    { key: "permissions.view", name: "View Permissions", description: "" },
+    { key: "permissions.assign", name: "Assign Permissions", description: "" },
+    { key: "permissions.manage", name: "Manage Permissions", description: "" },
+    { key: "settings.view", name: "View Settings", description: "" },
+    { key: "settings.update", name: "Update Settings", description: "" },
+    { key: "chats.view", name: "View Chats", description: "" },
+    { key: "chats.send", name: "Send Messages", description: "" },
+    { key: "chats.moderate", name: "Moderate Chats", description: "" },
+    { key: "notifications.view", name: "View Notifications", description: "" },
+    { key: "notifications.send", name: "Send Notifications", description: "" },
+    { key: "account.view", name: "View Account", description: "" },
+    { key: "account.update", name: "Update Account", description: "" },
+    {
+      key: "account.password.change",
+      name: "Change Password",
+      description: "",
+    },
+  ];
+
+  const viewPermissions = permissions.filter((permission) =>
+    permission.key.endsWith(".view"),
+  );
+
+  useEffect(() => {
+    if (!data?.data) return;
+    setUsers(data.data);
+  }, [data]);
+
+  const normalizePermissions = (user: AdminEmployee) => {
+    if (!user.permissions) return [];
+    if (typeof user.permissions[0] === "string") {
+      return user.permissions as string[];
+    }
+    return (user.permissions as { key: string }[]).map((perm) => perm.key);
+  };
+
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock add
-    setUsers([
-      ...users,
-      {
-        id: Date.now().toString(),
-        email: newUser.email,
-        role: newUser.role,
-        permissions: [],
-      },
-    ]);
+    createEmployee({
+      email: newUser.email,
+      password: newUser.password,
+    });
     setIsAdding(false);
     setNewUser({
       email: "",
       password: "",
-      role: "Staff",
     });
   };
-  const togglePermission = (userId: string, path: string) => {
-    setUsers(
-      users.map((u) => {
-        if (u.id !== userId) return u;
-        const hasPerm = u.permissions.includes(path);
-        return {
-          ...u,
-          permissions: hasPerm
-            ? u.permissions.filter((p) => p !== path)
-            : [...u.permissions, path],
-        };
-      }),
-    );
+  const togglePermission = async (userId: string | number, key: string) => {
+    const previousUsers = users;
+    const nextUsers = users.map((u) => {
+      if (String(u.id) !== String(userId)) return u;
+      const currentPermissions = normalizePermissions(u);
+      const hasPerm = currentPermissions.includes(key);
+      const nextPermissions = hasPerm
+        ? currentPermissions.filter((perm) => perm !== key)
+        : [...currentPermissions, key];
+      return {
+        ...u,
+        permissions: nextPermissions,
+      };
+    });
+
+    setUsers(nextUsers);
+    try {
+      const target = nextUsers.find((u) => String(u.id) === String(userId));
+      if (!target) return;
+      await updatePermissions({
+        id: userId,
+        permissions: normalizePermissions(target),
+      }).unwrap();
+    } catch (error) {
+      setUsers(previousUsers);
+    }
   };
   const deleteUser = (id: string) => {
-    setUsers(users.filter((u) => u.id !== id));
+    setUsers(users.filter((u) => u.id.toString() !== id));
   };
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -173,7 +236,7 @@ export function PermissionsPage() {
                 </div>
                 {user.role !== "Admin" && (
                   <button
-                    onClick={() => deleteUser(user.id)}
+                    onClick={() => deleteUser(user.id.toString())}
                     className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
                   >
                     <Trash2 className="h-5 w-5" />
@@ -187,29 +250,33 @@ export function PermissionsPage() {
                   Page Permissions
                 </h4>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-                  {APP_PAGES.map((page) => (
+                  {viewPermissions.map((permission) => (
                     <label
-                      key={page.path}
+                      key={permission.key}
                       className="group flex cursor-pointer items-center gap-2"
                     >
                       <div
-                        className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${user.permissions.includes(page.path) ? "bg-[#278687] border-[#278687]" : "bg-white border-gray-300 group-hover:border-[#278687]"}`}
+                        className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${normalizePermissions(user).includes(permission.key) ? "bg-[#278687] border-[#278687]" : "bg-white border-gray-300 group-hover:border-[#278687]"}`}
                       >
-                        {user.permissions.includes(page.path) && (
-                          <Check className="h-3 w-3 text-white" />
-                        )}
+                        {normalizePermissions(user).includes(
+                          permission.key,
+                        ) && <Check className="h-3 w-3 text-white" />}
                       </div>
                       <input
                         type="checkbox"
                         className="hidden"
-                        checked={user.permissions.includes(page.path)}
-                        onChange={() => togglePermission(user.id, page.path)}
+                        checked={normalizePermissions(user).includes(
+                          permission.key,
+                        )}
+                        onChange={() =>
+                          togglePermission(user.id, permission.key)
+                        }
                         disabled={user.role === "Admin"}
                       />
                       <span
-                        className={`text-sm ${user.permissions.includes(page.path) ? "text-gray-900" : "text-gray-500"}`}
+                        className={`text-sm font-semibold ${normalizePermissions(user).includes(permission.key) ? "text-gray-900" : "text-gray-500"}`}
                       >
-                        {page.label}
+                        <i> {permission.name.replace("View", "")}</i>
                       </span>
                     </label>
                   ))}

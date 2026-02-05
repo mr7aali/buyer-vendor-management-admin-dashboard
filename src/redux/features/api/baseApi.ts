@@ -5,6 +5,13 @@ import {
   UpdateAdminProfileRequest,
   UpdateAdminProfileResponse,
 } from "@/@types/admin_profile_data";
+import {
+  CreateAdminEmployeeRequest,
+  CreateAdminEmployeeResponse,
+  GetAdminEmployeesResponse,
+  UpdateAdminEmployeePermissionsRequest,
+  UpdateAdminEmployeePermissionsResponse,
+} from "@/@types/admin_employee";
 import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
 import { AdminUserDetailsResponse } from "@/@types/get_single_buyer";
@@ -33,7 +40,7 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Users", "Vendors", "Orders", "Admin"], // Add Vendors tag
+  tagTypes: ["Users", "Vendors", "Orders", "Admin", "AdminEmployees"], // Add Vendors tag
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
     adminLogin: builder.mutation<AdminLoginResponse, AdminLoginRequest>({
@@ -177,6 +184,35 @@ export const baseApi = createApi({
         body,
       }),
     }),
+    createAdminEmployee: builder.mutation<
+      CreateAdminEmployeeResponse,
+      CreateAdminEmployeeRequest
+    >({
+      query: (body) => ({
+        url: "/auth/admin/employee",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AdminEmployees"],
+    }),
+    getAdminEmployees: builder.query<GetAdminEmployeesResponse, void>({
+      query: () => ({
+        url: "/auth/admin/employees",
+        method: "GET",
+      }),
+      providesTags: ["AdminEmployees"],
+    }),
+    updateAdminEmployeePermissions: builder.mutation<
+      UpdateAdminEmployeePermissionsResponse,
+      UpdateAdminEmployeePermissionsRequest
+    >({
+      query: ({ id, permissions }) => ({
+        url: `/auth/admin/employee/${id}/permissions`,
+        method: "PATCH",
+        body: { permissions },
+      }),
+      invalidatesTags: ["AdminEmployees"],
+    }),
   }),
 });
 
@@ -193,4 +229,7 @@ export const {
   useGetAdminMeQuery,
   useUpdateAdminProfileMutation,
   useChangeAdminPasswordMutation,
+  useCreateAdminEmployeeMutation,
+  useGetAdminEmployeesQuery,
+  useUpdateAdminEmployeePermissionsMutation,
 } = baseApi;
