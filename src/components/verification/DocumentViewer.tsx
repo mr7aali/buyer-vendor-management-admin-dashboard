@@ -29,7 +29,7 @@ export function DocumentViewer({
   onReject,
 }: DocumentViewerProps) {
   const [selectedDoc, setSelectedDoc] = useState<VerificationDocument | null>(
-    null
+    null,
   );
   const [rejectReason, setRejectReason] = useState("");
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);

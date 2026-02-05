@@ -8,6 +8,8 @@ import { Users, Store, Filter, Search } from "lucide-react";
 import {
   useGetPendingBuyersQuery,
   useGetPendingVendorsQuery,
+  useVerifyBuyerDocumentsMutation,
+  useVerifyVendorDocumentsMutation,
 } from "@/redux/features/api/baseApi";
 export function VerificationPage() {
   const [activeTab, setActiveTab] = useState<"users" | "vendors">("users");
@@ -16,6 +18,8 @@ export function VerificationPage() {
     useGetPendingBuyersQuery();
   const { data: vendorData, isLoading: isLoadingVendors } =
     useGetPendingVendorsQuery();
+  const [verifyBuyerDocuments] = useVerifyBuyerDocumentsMutation();
+  const [verifyVendorDocuments] = useVerifyVendorDocumentsMutation();
 
   const formatDate = (value: string) =>
     new Date(value).toLocaleDateString(undefined, {
@@ -68,12 +72,26 @@ export function VerificationPage() {
     );
   }, [activeTab, buyerDocs, vendorDocs, searchQuery]);
   const handleApprove = (id: string) => {
-    console.log("Approved document:", id);
-    // In real app: API call to approve
+    if (activeTab === "users") {
+      verifyBuyerDocuments({ id, isNidVerify: true });
+    } else {
+      verifyVendorDocuments({
+        id,
+        isNidVerify: true,
+        isBussinessIdVerified: true,
+      });
+    }
   };
   const handleReject = (id: string, reason: string) => {
-    console.log("Rejected document:", id, "Reason:", reason);
-    // In real app: API call to reject
+    if (activeTab === "users") {
+      verifyBuyerDocuments({ id, isNidVerify: false });
+    } else {
+      verifyVendorDocuments({
+        id,
+        isNidVerify: false,
+        isBussinessIdVerified: false,
+      });
+    }
   };
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">

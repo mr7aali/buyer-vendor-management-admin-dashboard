@@ -44,7 +44,15 @@ export const baseApi = createApi({
       return headers;
     },
   }),
-  tagTypes: ["Users", "Vendors", "Orders", "Admin", "AdminEmployees"], // Add Vendors tag
+  tagTypes: [
+    "Users",
+    "Vendors",
+    "Orders",
+    "Admin",
+    "AdminEmployees",
+    "PendingVendors",
+    "PendingBuyers",
+  ], // Add Vendors tag
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
     adminLogin: builder.mutation<AdminLoginResponse, AdminLoginRequest>({
@@ -217,7 +225,10 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["AdminEmployees"],
     }),
-    deleteAdminEmployee: builder.mutation<{ success?: boolean; message?: string }, string | number>({
+    deleteAdminEmployee: builder.mutation<
+      { success?: boolean; message?: string },
+      string | number
+    >({
       query: (id) => ({
         url: `/auth/admin/employee/${id}`,
         method: "DELETE",
@@ -229,12 +240,40 @@ export const baseApi = createApi({
         url: "/auth/admin/pending-buyers",
         method: "GET",
       }),
+      providesTags: ["PendingBuyers"],
     }),
     getPendingVendors: builder.query<PendingVendorsResponse, void>({
       query: () => ({
         url: "/auth/admin/pending-vendors",
         method: "GET",
       }),
+      providesTags: ["PendingVendors"],
+    }),
+    verifyVendorDocuments: builder.mutation<
+      { success?: boolean; message?: string },
+      {
+        id: string | number;
+        isNidVerify: boolean;
+        isBussinessIdVerified: boolean;
+      }
+    >({
+      query: ({ id, isNidVerify, isBussinessIdVerified }) => ({
+        url: `/auth/vendor/${id}`,
+        method: "PATCH",
+        body: { isNidVerify, isBussinessIdVerified },
+      }),
+      invalidatesTags: ["Vendors", "PendingVendors"],
+    }),
+    verifyBuyerDocuments: builder.mutation<
+      { success?: boolean; message?: string },
+      { id: string | number; isNidVerify: boolean }
+    >({
+      query: ({ id, isNidVerify }) => ({
+        url: `/auth/buyer/${id}`,
+        method: "PATCH",
+        body: { isNidVerify },
+      }),
+      invalidatesTags: ["Users", "PendingBuyers"],
     }),
   }),
 });
@@ -258,4 +297,6 @@ export const {
   useDeleteAdminEmployeeMutation,
   useGetPendingBuyersQuery,
   useGetPendingVendorsQuery,
+  useVerifyVendorDocumentsMutation,
+  useVerifyBuyerDocumentsMutation,
 } = baseApi;
