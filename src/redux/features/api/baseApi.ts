@@ -1,4 +1,8 @@
-import { AdminMeResponse } from "@/@types/admin_profile_data";
+import {
+  AdminMeResponse,
+  UpdateAdminProfileRequest,
+  UpdateAdminProfileResponse,
+} from "@/@types/admin_profile_data";
 import { IUsersListApiResponse } from "@/@types/get_all_user";
 import { IVendorsListApiResponse } from "@/@types/get_all_vendors";
 import { AdminUserDetailsResponse } from "@/@types/get_single_buyer";
@@ -141,6 +145,26 @@ export const baseApi = createApi({
       query: () => "/auth/admin/me",
       providesTags: ["Admin"],
     }),
+    updateAdminProfile: builder.mutation<
+      UpdateAdminProfileResponse,
+      UpdateAdminProfileRequest
+    >({
+      query: (body) => {
+        const formData = new FormData();
+        formData.append("fullName", body.fullName);
+        formData.append("email", body.email);
+        if (body.avatar) {
+          formData.append("avatar", body.avatar);
+        }
+
+        return {
+          url: "/auth/admin-profile-update",
+          method: "PATCH",
+          body: formData,
+        };
+      },
+      invalidatesTags: ["Admin"],
+    }),
   }),
 });
 
@@ -155,4 +179,5 @@ export const {
   useGetAdminOrderDetailsQuery,
   useGetAdminUserDetailsQuery,
   useGetAdminMeQuery,
+  useUpdateAdminProfileMutation,
 } = baseApi;

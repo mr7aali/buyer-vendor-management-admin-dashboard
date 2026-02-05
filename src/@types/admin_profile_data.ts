@@ -13,14 +13,14 @@ type AdminPermission = {
 };
 
 // Admin Profile
-type AdminProfile = {
+export type AdminProfile = {
   avatar: string;
   email: string;
   fullName: string;
   id: number;
   role: AdminRole | string;
   permissions: string[];
-  _count: {
+  _count?: {
     permissions: number;
   };
   updatedAt: string;
@@ -29,6 +29,19 @@ type AdminProfile = {
 
 // API Response
 export type AdminMeResponse = {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  data: AdminProfile;
+};
+
+export type UpdateAdminProfileRequest = {
+  fullName: string;
+  email: string;
+  avatar?: File | null;
+};
+
+export type UpdateAdminProfileResponse = {
   success: boolean;
   statusCode: number;
   message: string;

@@ -1,12 +1,85 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Header } from "../components/dashboard/Header";
 import { useAuth } from "../contexts/AuthContext";
 import { User, Mail, Shield, Save, Lock } from "lucide-react";
+import { useUpdateAdminProfileMutation } from "@/redux/features/api/baseApi";
 export function AccountPage() {
-  const { admin: user } = useAuth();
+  const { admin: user, updateAdmin } = useAuth();
+  const [updateAdminProfile, { isLoading: isUpdating }] =
+    useUpdateAdminProfileMutation();
 
   const isAdmin = user?.role !== "Admin";
   const [isEditing, setIsEditing] = useState(false);
+  const [formValues, setFormValues] = useState({
+    fullName: user?.fullName || "",
+    email: user?.email || "",
+  });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState(
+    user?.avatar ||
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setFormValues({
+      fullName: user.fullName || "",
+      email: user.email || "",
+    });
+    setAvatarPreview(
+      user.avatar ||
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    );
+  }, [user]);
+
+  useEffect(() => {
+    if (!avatarFile) return;
+    const objectUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [avatarFile]);
+
+  const canSave = useMemo(() => {
+    const nameChanged = formValues.fullName !== (user?.fullName || "");
+    const emailChanged = formValues.email !== (user?.email || "");
+    return (nameChanged || emailChanged || !!avatarFile) && !isUpdating;
+  }, [formValues, user, avatarFile, isUpdating]);
+
+  const handleSave = async () => {
+    if (!user) return;
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const response = await updateAdminProfile({
+        fullName: formValues.fullName.trim(),
+        email: formValues.email.trim(),
+        avatar: avatarFile,
+      }).unwrap();
+
+      const updated = response.data;
+      updateAdmin({
+        fullName: updated.fullName,
+        email: updated.email,
+        avatar: updated.avatar,
+        updatedAt: updated.updatedAt,
+      });
+      setFormValues({
+        fullName: updated.fullName || "",
+        email: updated.email || "",
+      });
+      setAvatarFile(null);
+      setAvatarPreview(
+        updated.avatar ||
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+      );
+      setIsEditing(false);
+      setSuccessMessage("Profile updated successfully.");
+    } catch (error) {
+      setErrorMessage("Failed to update profile. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -40,23 +113,28 @@ export function AccountPage() {
                 <div className="mb-8 flex items-center gap-6">
                   <div className="relative">
                     <img
-                      src={
-                        // user?.avatar ||
-                        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                      }
+                      src={avatarPreview}
                       alt="Profile"
                       className="h-24 w-24 rounded-full border-4 border-gray-50"
                     />
                     {isEditing && (
-                      <button className="absolute bottom-0 right-0 bg-white border border-gray-200 p-1.5 rounded-full shadow-sm hover:bg-gray-50">
+                      <label className="absolute bottom-0 right-0 cursor-pointer bg-white border border-gray-200 p-1.5 rounded-full shadow-sm hover:bg-gray-50">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] || null;
+                            setAvatarFile(file);
+                          }}
+                        />
                         <User className="h-4 w-4 text-gray-600" />
-                      </button>
+                      </label>
                     )}
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">
-                      {/* {user?.name} */}
-                      N/A
+                      {formValues.fullName || "N/A"}
                     </h2>
                     <p className="text-gray-500">{user?.role}</p>
                   </div>
@@ -71,7 +149,13 @@ export function AccountPage() {
                       <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                       <input
                         type="text"
-                        defaultValue={user?.fullName}
+                        value={formValues.fullName}
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            fullName: event.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687] disabled:opacity-60 disabled:cursor-not-allowed"
                       />
@@ -85,7 +169,13 @@ export function AccountPage() {
                       <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                       <input
                         type="email"
-                        defaultValue={user?.email}
+                        value={formValues.email}
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            email: event.target.value,
+                          }))
+                        }
                         disabled={!isEditing}
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687] disabled:opacity-60 disabled:cursor-not-allowed"
                       />
@@ -110,19 +200,41 @@ export function AccountPage() {
                 {isEditing && (
                   <div className="mt-8 flex justify-end gap-3">
                     <button
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormValues({
+                          fullName: user?.fullName || "",
+                          email: user?.email || "",
+                        });
+                        setAvatarFile(null);
+                        setAvatarPreview(
+                          user?.avatar ||
+                            "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                        );
+                        setErrorMessage(null);
+                        setSuccessMessage(null);
+                      }}
                       className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={() => setIsEditing(false)}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#278687] text-white rounded-lg text-sm font-medium hover:bg-[#1e6b6c]"
+                      onClick={handleSave}
+                      disabled={!canSave}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#278687] text-white rounded-lg text-sm font-medium hover:bg-[#1e6b6c] disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <Save className="h-4 w-4" />
-                      Save Changes
+                      {isUpdating ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
+                )}
+                {errorMessage && (
+                  <p className="mt-4 text-sm text-red-600">{errorMessage}</p>
+                )}
+                {successMessage && (
+                  <p className="mt-4 text-sm text-green-600">
+                    {successMessage}
+                  </p>
                 )}
               </div>
             </div>
