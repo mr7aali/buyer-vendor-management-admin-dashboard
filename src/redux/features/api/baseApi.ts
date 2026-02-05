@@ -213,6 +213,13 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["AdminEmployees"],
     }),
+    deleteAdminEmployee: builder.mutation<{ success?: boolean; message?: string }, string | number>({
+      query: (id) => ({
+        url: `/auth/admin/employee/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AdminEmployees"],
+    }),
   }),
 });
 
@@ -232,4 +239,5 @@ export const {
   useCreateAdminEmployeeMutation,
   useGetAdminEmployeesQuery,
   useUpdateAdminEmployeePermissionsMutation,
+  useDeleteAdminEmployeeMutation,
 } = baseApi;

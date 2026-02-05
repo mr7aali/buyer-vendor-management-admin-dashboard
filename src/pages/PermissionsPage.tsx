@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Header } from "../components/dashboard/Header";
-import { Shield, Plus, Trash2, Check } from "lucide-react";
+import { Shield, Plus, Trash2, Check, X } from "lucide-react";
 import {
   useCreateAdminEmployeeMutation,
+  useDeleteAdminEmployeeMutation,
   useGetAdminEmployeesQuery,
   useUpdateAdminEmployeePermissionsMutation,
 } from "@/redux/features/api/baseApi";
@@ -11,9 +12,14 @@ export function PermissionsPage() {
   const { data } = useGetAdminEmployeesQuery();
   const [createEmployee] = useCreateAdminEmployeeMutation();
   const [updatePermissions] = useUpdateAdminEmployeePermissionsMutation();
+  const [deleteEmployee, { isLoading: isDeleting }] =
+    useDeleteAdminEmployeeMutation();
 
   const [users, setUsers] = useState<AdminEmployee[]>([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | number | null>(
+    null
+  );
   const [newUser, setNewUser] = useState({
     email: "",
     password: "",
@@ -125,8 +131,23 @@ export function PermissionsPage() {
       setUsers(previousUsers);
     }
   };
-  const deleteUser = (id: string) => {
-    setUsers(users.filter((u) => u.id.toString() !== id));
+  const deleteUser = (id: string | number) => {
+    setConfirmDeleteId(id);
+  };
+
+  const cancelDelete = () => {
+    setConfirmDeleteId(null);
+  };
+
+  const confirmDelete = async (id: string | number) => {
+    const previousUsers = users;
+    setUsers(users.filter((u) => String(u.id) !== String(id)));
+    try {
+      await deleteEmployee(id).unwrap();
+      setConfirmDeleteId(null);
+    } catch (error) {
+      setUsers(previousUsers);
+    }
   };
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -235,12 +256,35 @@ export function PermissionsPage() {
                   </div>
                 </div>
                 {user.role !== "Admin" && (
-                  <button
-                    onClick={() => deleteUser(user.id.toString())}
-                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {confirmDeleteId === user.id ? (
+                      <>
+                        <button
+                          onClick={() => confirmDelete(user.id)}
+                          disabled={isDeleting}
+                          className="rounded-lg p-2 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          title="Confirm delete"
+                        >
+                          <Check className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={cancelDelete}
+                          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                          title="Cancel"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => deleteUser(user.id)}
+                        className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 
