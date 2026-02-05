@@ -20,6 +20,10 @@ import { OrderResponse } from "@/@types/get_single_orders";
 import { AdminLoginRequest, AdminLoginResponse } from "@/@types/logintypes";
 import { OrderListResponse } from "@/@types/oder";
 import {
+  PendingBuyersResponse,
+  PendingVendorsResponse,
+} from "@/@types/verification";
+import {
   ISingleVendorResponse,
   UpdateVendorRequest,
   UpdateVendorResponse,
@@ -220,6 +224,18 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["AdminEmployees"],
     }),
+    getPendingBuyers: builder.query<PendingBuyersResponse, void>({
+      query: () => ({
+        url: "/auth/admin/pending-buyers",
+        method: "GET",
+      }),
+    }),
+    getPendingVendors: builder.query<PendingVendorsResponse, void>({
+      query: () => ({
+        url: "/auth/admin/pending-vendors",
+        method: "GET",
+      }),
+    }),
   }),
 });
 
@@ -240,4 +256,6 @@ export const {
   useGetAdminEmployeesQuery,
   useUpdateAdminEmployeePermissionsMutation,
   useDeleteAdminEmployeeMutation,
+  useGetPendingBuyersQuery,
+  useGetPendingVendorsQuery,
 } = baseApi;
