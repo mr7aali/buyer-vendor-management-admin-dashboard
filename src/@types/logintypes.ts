@@ -1,14 +1,16 @@
+import { Admin } from "@/contexts/AuthContext";
+
 export type AdminLoginRequest = {
   email: string;
   password: string;
 };
 
-export type Admin = {
-  id: number;
-  email: string;
-  role: string;
-  permissions: string[];
-};
+// export type Admin = {
+//   id: number;
+//   email: string;
+//   role: string;
+//   permissions: string[];
+// };
 
 export type AdminLoginResponse = {
   success: boolean;

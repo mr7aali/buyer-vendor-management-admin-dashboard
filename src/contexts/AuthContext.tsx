@@ -9,6 +9,10 @@ export interface Admin {
   email: string;
   role: string; // SUPER_ADMIN | STAFF | SUB_ADMIN
   permissions: string[]; // route-based permissions
+  fullName: string;
+  avatar: string;
+  updatedAt: string;
+  createdAt: string;
 }
 
 interface AuthContextType {
@@ -19,6 +23,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   checkPermission: (path: string) => boolean;
+  updateAdmin: (updates: Partial<Admin>) => void;
 }
 
 /* ---------- Context ---------- */
@@ -69,6 +74,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setToken(null);
   };
 
+  /* ---------- UPDATE ADMIN ---------- */
+  const updateAdmin = (updates: Partial<Admin>) => {
+    setAdmin((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...updates };
+      localStorage.setItem("admin", JSON.stringify(next));
+      return next;
+    });
+  };
+
   /* ---------- PERMISSION CHECK ---------- */
   const checkPermission = (path: string): boolean => {
     if (!admin) return false;
@@ -111,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         login,
         logout,
         checkPermission,
+        updateAdmin,
       }}
     >
       {children}

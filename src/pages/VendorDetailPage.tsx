@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Header } from "../components/dashboard/Header";
-import { StatusBadge } from "../components/ui/StatusBadge";
+
 import { DocumentViewer } from "../components/verification/DocumentViewer";
 import { TrackingModal } from "../components/orders/TrackingModal";
 import { EditProductModal } from "../components/products/EditProductModal";
@@ -15,20 +15,19 @@ import {
   ExternalLink,
   ArrowLeft,
   Package,
-  Truck,
-  Clock,
   Phone,
   Globe,
   DollarSign,
-  Users,
   TrendingUp,
   ChevronRight,
   ChevronLeft,
   Search,
-  Filter,
-  AlertCircle,
+  Hash,
 } from "lucide-react";
-import { useGetSingleVendorsByIdQuery } from "@/redux/features/api/baseApi";
+import {
+  useGetSingleVendorsByIdQuery,
+  useUpdateVendorMutation,
+} from "@/redux/features/api/baseApi";
 
 // Interfaces
 interface Product {
@@ -68,11 +67,12 @@ export function VendorDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const { data } = useGetSingleVendorsByIdQuery(
+  const { data, isLoading, isFetching } = useGetSingleVendorsByIdQuery(
     { id: id || "" },
     { skip: !id, refetchOnMountOrArgChange: true },
   );
-  console.log(data);
+  const vendor = data?.data;
+  const isBusy = isLoading || isFetching;
   const [activeTab, setActiveTab] = useState<
     "overview" | "products" | "orders"
   >("overview");
@@ -97,31 +97,6 @@ export function VendorDetailPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  // Mock Data
-  const vendor = {
-    name: "TechGiant Solutions",
-    email: "contact@techgiant.com",
-    phone: "+1 (555) 123-4567",
-    website: "https://techgiant.example.com",
-    category: "Electronics",
-    country: "United States",
-    address: "123 Tech Valley Dr, San Francisco, CA 94043",
-    joinDate: "Jan 15, 2023",
-    verified: true,
-    rating: 4.8,
-    logo: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80",
-    description:
-      "TechGiant Solutions is a premier provider of high-quality electronics and computer hardware. We specialize in enterprise-grade equipment and consumer electronics with a focus on reliability and customer service.",
-    stats: {
-      revenue: "$45,230",
-      products: 145,
-      orders: 892,
-      returns: "1.2%",
-      responseTime: "2 hours",
-      completionRate: "98%",
-    },
-  };
 
   const categories: Category[] = [
     {
@@ -268,35 +243,30 @@ export function VendorDetailPage() {
 
   const documents = [
     {
-      id: "1",
-      name: "Business License.pdf",
+      key: "isBussinessIdVerified",
+      name: "Business License ",
       type: "License",
-      uploadDate: "Jan 15, 2023",
-      status: "approved" as const,
-      url: "#",
+      uploadDate: vendor?.createdAt || "",
+      status: vendor?.isBussinessIdVerified || false,
+      url: vendor?.bussinessIdPhotoUrl || "",
     },
     {
-      id: "2",
-      name: "Tax Registration.pdf",
-      type: "Tax",
-      uploadDate: "Jan 15, 2023",
-      status: "approved" as const,
-      url: "#",
+      key: "isNidVerify",
+      name: "Identity Proof",
+      type: "NID",
+      uploadDate: vendor?.createdAt || "",
+      status: vendor?.isNidVerify || false,
+      url: vendor?.nidFontPhotoUrl || "",
     },
     {
-      id: "3",
-      name: "Identity Proof.jpg",
-      type: "ID",
-      uploadDate: "Jan 16, 2023",
-      status: "pending" as const,
-      url: "#",
+      key: "isNidVerify_",
+      name: "Identity Proof",
+      type: "NID",
+      uploadDate: vendor?.createdAt || "",
+      status: vendor?.isNidVerify || false,
+      url: vendor?.nidBackPhotoUrl || "",
     },
   ];
-
-  const handleTrackOrder = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setIsTrackingOpen(true);
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -318,7 +288,8 @@ export function VendorDetailPage() {
         return "bg-gray-100 text-gray-700";
     }
   };
-
+  const [updateVendor, { isLoading: vendorDataUpdaing }] =
+    useUpdateVendorMutation();
   // Products Logic
   const filteredProducts = products.filter((product) => {
     if (selectedCategory && product.category !== selectedCategory) return false;
@@ -371,6 +342,20 @@ export function VendorDetailPage() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+  if (isBusy) {
+    return (
+      <div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+  if (!vendor && !isBusy) {
+    return (
+      <div>
+        <p>No data found.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -390,17 +375,17 @@ export function VendorDetailPage() {
           <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
             <div className="flex-shrink-0 w-20 h-20 p-1 border border-gray-100 rounded-xl bg-gray-50">
               <img
-                src={vendor.logo}
-                alt={vendor.name}
+                src={vendor?.logoUrl || ""}
+                alt={vendor?.fulllName}
                 className="object-cover w-full h-full rounded-lg"
               />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-2xl font-bold text-gray-900">
-                  {vendor.name}
+                  {vendor?.fulllName}
                 </h1>
-                {vendor.verified && (
+                {vendor?.isVerified && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">
                     <ShieldCheck className="w-3 h-3" /> Verified
                   </span>
@@ -408,16 +393,24 @@ export function VendorDetailPage() {
               </div>
               <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
-                  <Store className="w-4 h-4" /> {vendor.category}
+                  <Store className="w-4 h-4" /> {vendor?.storename}
                 </div>
                 <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" /> {vendor.country}
+                  <Hash className="w-4 h-4" /> {vendor?.vendorCode}
                 </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" /> Since {vendor.joinDate}
-                </div>
+                {vendor?.createdAt && (
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-4 h-4" /> Since{" "}
+                    {new Date(vendor?.createdAt).toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-1 font-medium text-amber-500">
-                  <Star className="w-4 h-4 fill-current" /> {vendor.rating}{" "}
+                  <Star className="w-4 h-4 fill-current" /> {vendor?.rating}{" "}
                   Rating
                 </div>
               </div>
@@ -475,7 +468,7 @@ export function VendorDetailPage() {
                 </div>
                 <div className="mb-1 text-sm text-gray-500">Total Revenue</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  {vendor.stats.revenue}
+                  {vendor?.financialStats.revenue}
                 </div>
               </div>
               <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
@@ -486,7 +479,7 @@ export function VendorDetailPage() {
                 </div>
                 <div className="mb-1 text-sm text-gray-500">Total Products</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  {vendor.stats.products}
+                  {vendor?._count.products}
                 </div>
               </div>
               <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
@@ -497,7 +490,7 @@ export function VendorDetailPage() {
                 </div>
                 <div className="mb-1 text-sm text-gray-500">Total Orders</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  {vendor.stats.orders}
+                  {vendor?._count.orders}
                 </div>
               </div>
               <div className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl">
@@ -508,7 +501,7 @@ export function VendorDetailPage() {
                 </div>
                 <div className="mb-1 text-sm text-gray-500">Return Rate</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  {vendor.stats.returns}
+                  {vendor?.returnRate}
                 </div>
               </div>
             </div>
@@ -520,7 +513,7 @@ export function VendorDetailPage() {
                   About the Vendor
                 </h3>
                 <p className="mb-6 leading-relaxed text-gray-600">
-                  {vendor.description}
+                  {vendor?.storeDescription}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -530,7 +523,7 @@ export function VendorDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 font-medium text-gray-900">
                       <Mail className="w-4 h-4 text-gray-400" />
-                      {vendor.email}
+                      {vendor?.user.email}
                     </div>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-xl">
@@ -539,32 +532,36 @@ export function VendorDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 font-medium text-gray-900">
                       <Phone className="w-4 h-4 text-gray-400" />
-                      {vendor.phone}
+                      {vendor?.phone}
                     </div>
                   </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <div className="mb-1 text-sm text-gray-500">
-                      Headquarters
+                  {(vendor?.address || vendor?.user.evanAddress) && (
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="mb-1 text-sm text-gray-500">
+                        Headquarters
+                      </div>
+                      <div className="flex items-center gap-2 font-medium text-gray-900">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        {vendor?.address || vendor?.user.evanAddress}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 font-medium text-gray-900">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      {vendor.address}
+                  )}
+                  {vendor?.website && (
+                    <div className="p-4 bg-gray-50 rounded-xl">
+                      <div className="mb-1 text-sm text-gray-500">Website</div>
+                      <div className="flex items-center gap-2 font-medium text-gray-900">
+                        <Globe className="w-4 h-4 text-gray-400" />
+                        <a
+                          href={""}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          techgiant.example.com
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <div className="mb-1 text-sm text-gray-500">Website</div>
-                    <div className="flex items-center gap-2 font-medium text-gray-900">
-                      <Globe className="w-4 h-4 text-gray-400" />
-                      <a
-                        href={vendor.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        techgiant.example.com
-                      </a>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -576,8 +573,71 @@ export function VendorDetailPage() {
                 <div className="mb-6">
                   <DocumentViewer
                     documents={documents}
-                    onApprove={(id) => console.log("Approve", id)}
-                    onReject={(id, reason) => console.log("Reject", id, reason)}
+                    onApprove={async (key) => {
+                      if (!id) return;
+
+                      try {
+                        if (key === "isNidVerify" || key === "isNidVerify_") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isNidVerify: true,
+                            },
+                          }).unwrap();
+
+                          // Optional: Show success toast/notification
+                          console.log("NID verification approved successfully");
+                        } else if (key === "isBussinessIdVerified") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isBussinessIdVerified: true,
+                            },
+                          }).unwrap();
+
+                          // Optional: Show success toast/notification
+                          console.log(
+                            "Business ID verification approved successfully",
+                          );
+                        }
+                      } catch (error) {
+                        console.error("Failed to approve document:", error);
+                        // Optional: Show error toast/notification
+                      }
+                    }}
+                    onReject={async (key, reason) => {
+                      if (!id) return;
+
+                      try {
+                        if (key === "isNidVerify" || key === "isNidVerify_") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isNidVerify: false,
+                            },
+                          }).unwrap();
+
+                          console.log("NID verification rejected:", reason);
+                        } else if (key === "isBussinessIdVerified") {
+                          await updateVendor({
+                            id,
+                            data: {
+                              isBussinessIdVerified: false,
+                            },
+                          }).unwrap();
+
+                          console.log(
+                            "Business ID verification rejected:",
+                            reason,
+                          );
+                        }
+
+                        // Optional: You might want to send the rejection reason to the backend
+                        // This would require adding a new field in the database or sending a notification
+                      } catch (error) {
+                        console.error("Failed to reject document:", error);
+                      }
+                    }}
                   />
                 </div>
               </div>
