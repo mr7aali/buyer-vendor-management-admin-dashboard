@@ -93,6 +93,32 @@ export interface AnalyticsResponse {
   };
 }
 
+export interface AdminChatMessage {
+  id: string;
+  threadId: string;
+  senderType: "ADMIN" | "BUYER" | "VENDOR";
+  messageText: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminChatConversation {
+  threadId: string;
+  participantType: "buyer" | "vendor";
+  participant: {
+    id: string;
+    userId: string;
+    name: string;
+    avatar: string;
+    role: string;
+    email?: string;
+  };
+  lastMessage: AdminChatMessage | null;
+  unreadCount: number;
+  updatedAt: string;
+}
+
 export type TimeRange = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface AnalyticsQueryParams {
@@ -144,6 +170,7 @@ export const baseApi = createApi({
     "PendingVendors",
     "PendingBuyers",
     "Analytics", // Added Analytics tag
+    "AdminChats",
   ],
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
@@ -414,6 +441,35 @@ export const baseApi = createApi({
       // Keep data fresh for 5 minutes
       keepUnusedDataFor: 300,
     }),
+
+    /* ---------- ADMIN CHAT QUERIES ---------- */
+    getAdminChatConversations: builder.query<AdminChatConversation[], void>({
+      query: () => ({
+        url: "/admin-chats/admin/conversations",
+        method: "GET",
+      }),
+      providesTags: ["AdminChats"],
+    }),
+
+    getAdminChatMessages: builder.query<AdminChatMessage[], string>({
+      query: (threadId) => ({
+        url: `/admin-chats/admin/threads/${threadId}/messages`,
+        method: "GET",
+      }),
+      providesTags: ["AdminChats"],
+    }),
+
+    sendAdminChatMessage: builder.mutation<
+      AdminChatMessage,
+      { threadId: string; messageText: string }
+    >({
+      query: ({ threadId, messageText }) => ({
+        url: `/admin-chats/admin/threads/${threadId}/messages`,
+        method: "POST",
+        body: { messageText },
+      }),
+      invalidatesTags: ["AdminChats"],
+    }),
   }),
 });
 
@@ -439,4 +495,7 @@ export const {
   useVerifyVendorDocumentsMutation,
   useVerifyBuyerDocumentsMutation,
   useGetAnalyticsQuery, // New analytics hook
+  useGetAdminChatConversationsQuery,
+  useGetAdminChatMessagesQuery,
+  useSendAdminChatMessageMutation,
 } = baseApi;

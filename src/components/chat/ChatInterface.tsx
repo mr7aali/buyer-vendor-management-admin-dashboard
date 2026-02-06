@@ -11,17 +11,16 @@ interface ChatInterfaceProps {
   recipientName: string;
   recipientAvatar: string;
   recipientRole: string;
-  initialMessages?: Message[];
+  messages: Message[];
   onSendMessage?: (text: string) => void;
 }
 export function ChatInterface({
   recipientName,
   recipientAvatar,
   recipientRole,
-  initialMessages = [],
+  messages,
   onSendMessage
 }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollToBottom = () => {
@@ -35,17 +34,6 @@ export function ChatInterface({
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    const msg: Message = {
-      id: Date.now().toString(),
-      text: newMessage,
-      sender: 'admin',
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      status: 'sent'
-    };
-    setMessages([...messages, msg]);
     setNewMessage('');
     onSendMessage?.(newMessage);
   };
