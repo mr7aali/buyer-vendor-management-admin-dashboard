@@ -52,14 +52,24 @@ export function ChatsPage() {
     refetch: refetchConversations,
     isLoading,
   } = useGetAdminChatConversationsQuery();
-  const conversationsData = conversationsDataRw?.data || [];
-  const { data: messagesData, isFetching: messagesLoading } =
+  const conversationsData = useMemo(() => {
+    if (Array.isArray(conversationsDataRw?.data)) {
+      return conversationsDataRw.data;
+    }
+    if (Array.isArray(conversationsDataRw)) {
+      return conversationsDataRw;
+    }
+    return [];
+  }, [conversationsDataRw]);
+  const { data: messagesDataRw, isFetching: messagesLoading } =
     useGetAdminChatMessagesQuery(selectedThreadId ?? skipToken);
   const [sendAdminChatMessage] = useSendAdminChatMessageMutation();
 
   useEffect(() => {
-    if (conversationsData) {
+    if (conversationsData.length) {
       setConversations(conversationsData as AdminChatConversation[]);
+    } else {
+      setConversations([]);
     }
   }, [conversationsData]);
 
@@ -74,8 +84,13 @@ export function ChatsPage() {
   }, [selectedThreadId]);
 
   useEffect(() => {
-    if (messagesData) {
-      setMessages(messagesData as AdminChatMessage[]);
+    const normalizedMessages = Array.isArray(messagesDataRw?.data)
+      ? messagesDataRw.data
+      : Array.isArray(messagesDataRw)
+        ? messagesDataRw
+        : [];
+    if (normalizedMessages.length) {
+      setMessages(normalizedMessages as AdminChatMessage[]);
       if (selectedThreadId) {
         setConversations((prev) =>
           prev.map((item) =>
@@ -85,8 +100,10 @@ export function ChatsPage() {
           ),
         );
       }
+    } else {
+      setMessages([]);
     }
-  }, [messagesData, selectedThreadId]);
+  }, [messagesDataRw, selectedThreadId]);
 
   useEffect(() => {
     const token = localStorage?.getItem("accessToken");
@@ -142,7 +159,7 @@ export function ChatsPage() {
 
   const filteredConversations = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
-    return conversations?.filter((chat) => {
+    return conversations.filter((chat) => {
       const type =
         chat.participantType.toLocaleLowerCase() === "buyer"
           ? "user"
