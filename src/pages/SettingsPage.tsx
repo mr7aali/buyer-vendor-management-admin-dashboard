@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import {
+  useChangeAdminPasswordMutation,
   useGetAdminMeQuery,
   useUpdateAdminProfileMutation,
 } from "../redux/features/api/baseApi";
@@ -26,6 +27,8 @@ export function SettingsPage() {
   const { data: adminMeData } = useGetAdminMeQuery();
   const [updateAdminProfile, { isLoading: isUpdatingProfile }] =
     useUpdateAdminProfileMutation();
+  const [changeAdminPassword, { isLoading: isUpdatingPassword }] =
+    useChangeAdminPasswordMutation();
 
   // Profile State
   const [profileImage, setProfileImage] = useState(
@@ -88,6 +91,13 @@ export function SettingsPage() {
     { id: "security", label: "Security", icon: Lock },
     { id: "billing", label: "Billing", icon: CreditCard },
   ];
+
+  // Security State
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   // Profile Handlers
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -162,6 +172,39 @@ export function SettingsPage() {
     });
   };
 
+  const handleChangePassword = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("Please fill in all password fields.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      await changeAdminPassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      }).unwrap();
+
+      setPasswordSuccess("Password updated successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      setPasswordError("Unable to update password. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
       <Header />
@@ -194,11 +237,11 @@ export function SettingsPage() {
           </div>
 
           {/* Content */}
-          <div className="flex-1" style={{ border: "1px solid red" }}>
+          <div className="flex-1">
             <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
               {/* General Tab */}
               {activeTab === "general" && (
-                <div className="space-y-6" style={{ border: "1px solid red" }}>
+                <div className="space-y-6">
                   <div>
                     <h2 className="mb-1 text-lg font-bold text-gray-900">
                       Profile Information
@@ -334,7 +377,7 @@ export function SettingsPage() {
 
               {/* Security Tab */}
               {activeTab === "security" && (
-                <div className="space-y-6" style={{ border: "1px solid red" }}>
+                <div className="space-y-6">
                   <div>
                     <h2 className="mb-1 text-lg font-bold text-gray-900">
                       Security Settings
@@ -344,7 +387,10 @@ export function SettingsPage() {
                     </p>
                   </div>
 
-                  <div className="mb-6 border-b border-gray-100 pb-6">
+                  <form
+                    onSubmit={handleChangePassword}
+                    className="mb-6 border-b border-gray-100 pb-6"
+                  >
                     <div className="max-w-md space-y-4">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -352,6 +398,8 @@ export function SettingsPage() {
                         </label>
                         <input
                           type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687]"
                         />
                       </div>
@@ -361,6 +409,8 @@ export function SettingsPage() {
                         </label>
                         <input
                           type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687]"
                         />
                       </div>
@@ -370,11 +420,38 @@ export function SettingsPage() {
                         </label>
                         <input
                           type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
                           className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687]"
                         />
                       </div>
+
+                      {passwordError && (
+                        <div className="text-sm text-red-600">
+                          {passwordError}
+                        </div>
+                      )}
+
+                      {passwordSuccess && (
+                        <div className="text-sm text-green-600">
+                          {passwordSuccess}
+                        </div>
+                      )}
+
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={isUpdatingPassword}
+                          className="inline-flex items-center gap-2 rounded-lg bg-[#278687] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#1e6b6c] disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          <Shield className="h-4 w-4" />
+                          {isUpdatingPassword
+                            ? "Updating..."
+                            : "Update Password"}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  </form>
 
                   <div>
                     <h3 className="mb-4 font-bold text-gray-900">
