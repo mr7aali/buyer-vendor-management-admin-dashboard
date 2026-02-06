@@ -118,6 +118,12 @@ export interface AdminChatConversation {
   unreadCount: number;
   updatedAt: string;
 }
+type AdminChatConversationRes = {
+  success: boolean;
+  statusCode: number;
+  message: string;
+  data: AdminChatConversation[];
+};
 
 export type TimeRange = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -443,7 +449,7 @@ export const baseApi = createApi({
     }),
 
     /* ---------- ADMIN CHAT QUERIES ---------- */
-    getAdminChatConversations: builder.query<AdminChatConversation[], void>({
+    getAdminChatConversations: builder.query<AdminChatConversationRes, void>({
       query: () => ({
         url: "/admin-chats/admin/conversations",
         method: "GET",

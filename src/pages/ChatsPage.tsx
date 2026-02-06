@@ -40,13 +40,19 @@ export function ChatsPage() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchValue, setSearchValue] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<AdminChatConversation[]>([]);
+  const [conversations, setConversations] = useState<AdminChatConversation[]>(
+    [],
+  );
   const [messages, setMessages] = useState<AdminChatMessage[]>([]);
   const selectedThreadRef = useRef<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  const { data: conversationsData, refetch: refetchConversations } =
-    useGetAdminChatConversationsQuery();
+  const {
+    data: conversationsDataRw,
+    refetch: refetchConversations,
+    isLoading,
+  } = useGetAdminChatConversationsQuery();
+  const conversationsData = conversationsDataRw?.data || [];
   const { data: messagesData, isFetching: messagesLoading } =
     useGetAdminChatMessagesQuery(selectedThreadId ?? skipToken);
   const [sendAdminChatMessage] = useSendAdminChatMessageMutation();
@@ -117,8 +123,7 @@ export function ChatsPage() {
 
         return updated.sort(
           (a, b) =>
-            new Date(b.updatedAt).getTime() -
-            new Date(a.updatedAt).getTime(),
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
         );
       });
 
@@ -137,8 +142,11 @@ export function ChatsPage() {
 
   const filteredConversations = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
-    return conversations.filter((chat) => {
-      const type = chat.participantType === "buyer" ? "user" : "vendor";
+    return conversations?.filter((chat) => {
+      const type =
+        chat.participantType.toLocaleLowerCase() === "buyer"
+          ? "user"
+          : "vendor";
       const matchesFilter = activeFilter === "all" || activeFilter === type;
       const matchesSearch =
         !normalizedSearch ||
@@ -230,7 +238,8 @@ export function ChatsPage() {
 
             <div className="flex-1 overflow-y-auto">
               {filteredConversations.map((chat) => {
-                const type = chat.participantType === "buyer" ? "user" : "vendor";
+                const type =
+                  chat.participantType === "buyer" ? "user" : "vendor";
                 const lastTime = chat.lastMessage?.createdAt
                   ? new Date(chat.lastMessage.createdAt).toLocaleTimeString(
                       [],
