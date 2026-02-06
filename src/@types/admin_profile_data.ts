@@ -39,6 +39,7 @@ export type UpdateAdminProfileRequest = {
   fullName: string;
   email: string;
   avatar?: File | null;
+  bio?: string;
 };
 
 export type UpdateAdminProfileResponse = {
