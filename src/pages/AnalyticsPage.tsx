@@ -236,6 +236,7 @@ export function AnalyticsPage() {
             change={analyticsData.revenue.totalRevenueChange}
             icon={DollarSign}
             linkText="View Report"
+            isHaveBootmLink={false}
           />
           <KPICard
             title="Total Orders"
@@ -259,6 +260,7 @@ export function AnalyticsPage() {
             change={growthRate > 0 ? 5 : -5}
             icon={TrendingUp}
             linkText="View Growth"
+            isHaveBootmLink={false}
           />
         </div>
 

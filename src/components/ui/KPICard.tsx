@@ -10,6 +10,7 @@ interface KPICardProps {
   linkText?: string;
   linkTo?: string;
   trend?: "up" | "down";
+  isHaveBootmLink?: boolean;
 }
 
 export function KPICard({
@@ -20,6 +21,7 @@ export function KPICard({
   linkText = "View Details",
   linkTo = "#",
   trend,
+  isHaveBootmLink = true,
 }: KPICardProps) {
   const isPositive = change >= 0;
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
@@ -46,16 +48,17 @@ export function KPICard({
           <Icon className="h-5 w-5 text-gray-600" />
         </div>
       </div>
-
-      <div className="mt-auto border-t border-gray-50 pt-4">
-        <Link
-          to={linkTo}
-          className="group flex items-center text-sm font-medium text-gray-600 transition-colors hover:text-primary"
-        >
-          {linkText}
-          <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </Link>
-      </div>
+      {isHaveBootmLink && (
+        <div className="mt-auto border-t border-gray-50 pt-4">
+          <Link
+            to={linkTo}
+            className="group flex items-center text-sm font-medium text-gray-600 transition-colors hover:text-primary"
+          >
+            {linkText}
+            <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

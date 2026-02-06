@@ -269,17 +269,32 @@ export const baseApi = createApi({
       UpdateAdminProfileRequest
     >({
       query: (body) => {
-        const formData = new FormData();
-        formData.append("fullName", body.fullName);
-        formData.append("email", body.email);
-        if (body.avatar) {
-          formData.append("avatar", body.avatar);
+        const hasAvatar = Boolean(body.avatar);
+
+        if (hasAvatar) {
+          const formData = new FormData();
+          formData.append("fullName", body.fullName);
+          formData.append("email", body.email);
+          if (body.bio !== undefined) {
+            formData.append("bio", body.bio ?? "");
+          }
+          formData.append("avatar", body.avatar as File);
+
+          return {
+            url: "/auth/admin-profile-update",
+            method: "PATCH",
+            body: formData,
+          };
         }
 
         return {
           url: "/auth/admin-profile-update",
           method: "PATCH",
-          body: formData,
+          body: {
+            fullName: body.fullName,
+            email: body.email,
+            bio: body.bio ?? "",
+          },
         };
       },
       invalidatesTags: ["Admin"],
