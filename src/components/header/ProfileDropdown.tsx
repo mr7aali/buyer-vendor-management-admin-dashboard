@@ -2,12 +2,15 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { User, LogOut, Settings, Shield } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useGetAdminMeQuery } from "../../redux/features/api/baseApi";
 interface ProfileDropdownProps {
   isOpen: boolean;
   onClose: () => void;
 }
 export function ProfileDropdown({ isOpen, onClose }: ProfileDropdownProps) {
-  const { admin: user, logout } = useAuth();
+  const { admin: authAdmin, logout } = useAuth();
+  const { data } = useGetAdminMeQuery(undefined, { skip: !isOpen });
+  const user = data?.data || authAdmin;
   if (!isOpen || !user) return null;
   return (
     <div className="animate-in slide-in-from-top-2 absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl duration-200">
@@ -36,7 +39,7 @@ export function ProfileDropdown({ isOpen, onClose }: ProfileDropdownProps) {
           <Settings className="h-4 w-4" />
           Settings
         </Link>
-        {user.role === "Admin" && (
+        {user.role === "SUPER_ADMIN" && (
           <Link
             to="/permissions"
             onClick={onClose}

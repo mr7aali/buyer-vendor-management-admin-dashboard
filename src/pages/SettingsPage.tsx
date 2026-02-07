@@ -87,7 +87,7 @@ export function SettingsPage() {
 
   const tabs = [
     { id: "general", label: "General", icon: User },
-    { id: "notifications", label: "Notifications", icon: Bell },
+    // { id: "notifications", label: "Notifications", icon: Bell },
     { id: "security", label: "Security", icon: Lock },
     { id: "billing", label: "Billing", icon: CreditCard },
   ];
