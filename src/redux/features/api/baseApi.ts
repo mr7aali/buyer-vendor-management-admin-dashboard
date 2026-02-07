@@ -125,6 +125,36 @@ type AdminChatConversationRes = {
   data: AdminChatConversation[];
 };
 
+export type NotificationType = "info" | "success" | "warning" | "error";
+export type NotificationCategory = "system" | "buyer" | "vendor" | "broadcast";
+
+export interface NotificationApi {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNotificationRequest {
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category?: NotificationCategory;
+}
+
+export interface CreateBroadcastNotificationRequest {
+  target: "all" | "buyers" | "vendors";
+  title: string;
+  message: string;
+  type?: NotificationType;
+}
+
 export type TimeRange = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface AnalyticsQueryParams {
@@ -154,11 +184,10 @@ const baseQueryWithAuthRedirect: BaseQueryFn<
   const result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
-    localStorage?.removeItem("accessToken");
-
-    if (window.location.pathname !== "/login") {
-      window.location.assign("/login");
-    }
+    // localStorage?.removeItem("accessToken");
+    // if (window.location.pathname !== "/login") {
+    //   window.location.assign("/login");
+    // }
   }
 
   return result;
@@ -177,6 +206,7 @@ export const baseApi = createApi({
     "PendingBuyers",
     "Analytics", // Added Analytics tag
     "AdminChats",
+    "Notifications",
   ],
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
@@ -476,6 +506,71 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["AdminChats"],
     }),
+
+    /* ---------- NOTIFICATIONS QUERIES ---------- */
+    getNotifications: builder.query<NotificationApi[], void>({
+      query: () => ({
+        url: "/notifications",
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    getUnreadNotifications: builder.query<NotificationApi[], void>({
+      query: () => ({
+        url: "/notifications/unread",
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    createNotification: builder.mutation<
+      NotificationApi,
+      CreateNotificationRequest
+    >({
+      query: (body) => ({
+        url: "/notifications",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    createNotificationBroadcast: builder.mutation<
+      { count: number },
+      CreateBroadcastNotificationRequest
+    >({
+      query: (body) => ({
+        url: "/notifications/broadcast",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    markNotificationRead: builder.mutation<NotificationApi, string>({
+      query: (id) => ({
+        url: `/notifications/${id}/read`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    markAllNotificationsRead: builder.mutation<{ count: number }, void>({
+      query: () => ({
+        url: "/notifications/read-all",
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    deleteNotification: builder.mutation<{ id: string }, string>({
+      query: (id) => ({
+        url: `/notifications/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
   }),
 });
 
@@ -504,4 +599,11 @@ export const {
   useGetAdminChatConversationsQuery,
   useGetAdminChatMessagesQuery,
   useSendAdminChatMessageMutation,
+  useGetNotificationsQuery,
+  useGetUnreadNotificationsQuery,
+  useCreateNotificationMutation,
+  useCreateNotificationBroadcastMutation,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
+  useDeleteNotificationMutation,
 } = baseApi;
