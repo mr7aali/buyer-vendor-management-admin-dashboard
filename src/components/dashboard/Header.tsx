@@ -322,7 +322,6 @@ export function Header() {
           </div>
         </div>
       </header>
-
       <FullWidthMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </>
   );
