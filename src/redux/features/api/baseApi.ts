@@ -135,9 +135,21 @@ export interface NotificationApi {
   message: string;
   type: NotificationType;
   category: NotificationCategory;
+  broadcastId?: string | null;
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BroadcastSummary {
+  broadcastId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  createdAt: string;
+  recipients: number;
+  readCount: number;
 }
 
 export interface CreateNotificationRequest {
@@ -153,6 +165,7 @@ export interface CreateBroadcastNotificationRequest {
   title: string;
   message: string;
   type?: NotificationType;
+  idempotencyKey?: string;
 }
 
 export type TimeRange = "daily" | "weekly" | "monthly" | "yearly";
@@ -508,7 +521,16 @@ export const baseApi = createApi({
     }),
 
     /* ---------- NOTIFICATIONS QUERIES ---------- */
-    getNotifications: builder.query<NotificationApi[], void>({
+    // NotificationApi[]
+    getNotifications: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi[];
+      },
+      void
+    >({
       query: () => ({
         url: "/notifications",
         method: "GET",
@@ -516,7 +538,15 @@ export const baseApi = createApi({
       providesTags: ["Notifications"],
     }),
 
-    getUnreadNotifications: builder.query<NotificationApi[], void>({
+    getUnreadNotifications: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi[];
+      },
+      void
+    >({
       query: () => ({
         url: "/notifications/unread",
         method: "GET",
@@ -524,8 +554,45 @@ export const baseApi = createApi({
       providesTags: ["Notifications"],
     }),
 
+    getBroadcasts: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: BroadcastSummary[];
+      },
+      void
+    >({
+      query: () => ({
+        url: "/notifications/broadcasts",
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    getBroadcastRecipients: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi[];
+      },
+      string
+    >({
+      query: (broadcastId) => ({
+        url: `/notifications/broadcasts/${broadcastId}/recipients`,
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
     createNotification: builder.mutation<
-      NotificationApi,
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi;
+      },
       CreateNotificationRequest
     >({
       query: (body) => ({
@@ -537,7 +604,12 @@ export const baseApi = createApi({
     }),
 
     createNotificationBroadcast: builder.mutation<
-      { count: number },
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: { count: number };
+      },
       CreateBroadcastNotificationRequest
     >({
       query: (body) => ({
@@ -548,7 +620,15 @@ export const baseApi = createApi({
       invalidatesTags: ["Notifications"],
     }),
 
-    markNotificationRead: builder.mutation<NotificationApi, string>({
+    markNotificationRead: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi;
+      },
+      string
+    >({
       query: (id) => ({
         url: `/notifications/${id}/read`,
         method: "PATCH",
@@ -556,7 +636,15 @@ export const baseApi = createApi({
       invalidatesTags: ["Notifications"],
     }),
 
-    markAllNotificationsRead: builder.mutation<{ count: number }, void>({
+    markAllNotificationsRead: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: { count: number };
+      },
+      void
+    >({
       query: () => ({
         url: "/notifications/read-all",
         method: "PATCH",
@@ -564,7 +652,15 @@ export const baseApi = createApi({
       invalidatesTags: ["Notifications"],
     }),
 
-    deleteNotification: builder.mutation<{ id: string }, string>({
+    deleteNotification: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: { id: string };
+      },
+      string
+    >({
       query: (id) => ({
         url: `/notifications/${id}`,
         method: "DELETE",
@@ -601,6 +697,8 @@ export const {
   useSendAdminChatMessageMutation,
   useGetNotificationsQuery,
   useGetUnreadNotificationsQuery,
+  useGetBroadcastsQuery,
+  useGetBroadcastRecipientsQuery,
   useCreateNotificationMutation,
   useCreateNotificationBroadcastMutation,
   useMarkNotificationReadMutation,

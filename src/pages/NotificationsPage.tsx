@@ -16,9 +16,11 @@ import {
 import {
   useCreateNotificationBroadcastMutation,
   useDeleteNotificationMutation,
+  useGetBroadcastsQuery,
   useGetNotificationsQuery,
   useMarkAllNotificationsReadMutation,
   useMarkNotificationReadMutation,
+  type BroadcastSummary,
   type NotificationApi,
 } from "../redux/features/api/baseApi";
 
@@ -30,6 +32,18 @@ type Notification = {
   category: "system" | "buyer" | "vendor" | "broadcast";
   date: string;
   read: boolean;
+};
+
+type BroadcastItem = {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "warning" | "success" | "error";
+  category: "system" | "buyer" | "vendor" | "broadcast";
+  date: string;
+  recipients: number;
+  readCount: number;
+  readRate: number;
 };
 
 const formatRelativeDate = (dateValue: string) => {
@@ -66,13 +80,24 @@ export function NotificationsPage() {
   const [broadcastTitle, setBroadcastTitle] = useState("");
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [broadcastTarget, setBroadcastTarget] = useState("all");
+  const [isBroadcastSubmitting, setIsBroadcastSubmitting] = useState(false);
 
   const {
-    data: apiNotifications = [],
+    data: apiNotificationsRaw,
     isLoading,
     isError,
     refetch,
   } = useGetNotificationsQuery();
+  const apiNotifications = apiNotificationsRaw?.data || [];
+
+  const {
+    data: apiBroadcastsRaw,
+    isLoading: isBroadcastsLoading,
+    isError: isBroadcastsError,
+    refetch: refetchBroadcasts,
+  } = useGetBroadcastsQuery();
+  const apiBroadcasts = apiBroadcastsRaw?.data || [];
+
   const [markNotificationRead] = useMarkNotificationReadMutation();
   const [markAllNotificationsRead] = useMarkAllNotificationsReadMutation();
   const [deleteNotification] = useDeleteNotificationMutation();
@@ -90,6 +115,27 @@ export function NotificationsPage() {
       read: notification.isRead,
     }));
   }, [apiNotifications]);
+
+  const broadcasts = useMemo<BroadcastItem[]>(() => {
+    return (apiBroadcasts as BroadcastSummary[]).map((broadcast) => {
+      const recipients = broadcast.recipients ?? 0;
+      const readCount = broadcast.readCount ?? 0;
+      const readRate =
+        recipients > 0 ? Math.round((readCount / recipients) * 100) : 0;
+
+      return {
+        id: broadcast.broadcastId,
+        title: broadcast.title,
+        message: broadcast.message,
+        type: broadcast.type ?? "info",
+        category: broadcast.category ?? "broadcast",
+        date: formatRelativeDate(broadcast.createdAt),
+        recipients,
+        readCount,
+        readRate,
+      };
+    });
+  }, [apiBroadcasts]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -139,14 +185,29 @@ export function NotificationsPage() {
       return;
     }
 
-    await createBroadcast({
-      title: broadcastTitle.trim(),
-      message: broadcastMessage.trim(),
-      target: broadcastTarget as "all" | "buyers" | "vendors",
-    });
-    setIsBroadcastOpen(false);
-    setBroadcastTitle("");
-    setBroadcastMessage("");
+    if (isBroadcastSubmitting || isBroadcastSending) {
+      return;
+    }
+
+    setIsBroadcastSubmitting(true);
+    const idempotencyKey =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    try {
+      await createBroadcast({
+        title: broadcastTitle.trim(),
+        message: broadcastMessage.trim(),
+        target: broadcastTarget as "all" | "buyers" | "vendors",
+        idempotencyKey,
+      }).unwrap();
+      setIsBroadcastOpen(false);
+      setBroadcastTitle("");
+      setBroadcastMessage("");
+    } finally {
+      setIsBroadcastSubmitting(false);
+    }
   };
 
   // Filtering
@@ -159,10 +220,21 @@ export function NotificationsPage() {
     return matchesTab && matchesSearch;
   });
 
+  const filteredBroadcasts = broadcasts.filter((broadcast) => {
+    const matchesTab = activeTab === "broadcast";
+    const matchesSearch =
+      broadcast.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      broadcast.message.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  const showingCount =
+    activeTab === "broadcast"
+      ? filteredBroadcasts.length
+      : filteredNotifications.length;
+
   return (
-    <div
-      className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12"
-    >
+    <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
       <Header />
 
       <main className="max-w-[1600px] mx-auto px-6 pt-8">
@@ -237,12 +309,73 @@ export function NotificationsPage() {
                   />
                 </div>
                 <div className="text-sm text-gray-500">
-                  Showing {filteredNotifications.length} notifications
+                  Showing {showingCount}{" "}
+                  {activeTab === "broadcast"
+                    ? "broadcasts"
+                    : "notifications"}
                 </div>
               </div>
 
               <div className="divide-y divide-gray-100">
-                {isLoading ? (
+                {activeTab === "broadcast" ? (
+                  isBroadcastsLoading ? (
+                    <div className="p-12 text-center text-gray-500">
+                      Loading broadcasts...
+                    </div>
+                  ) : isBroadcastsError ? (
+                    <div className="p-12 text-center text-gray-500">
+                      <p className="mb-3">Failed to load broadcasts.</p>
+                      <button
+                        onClick={() => refetchBroadcasts()}
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : filteredBroadcasts.length > 0 ? (
+                    filteredBroadcasts.map((broadcast) => (
+                      <div
+                        key={broadcast.id}
+                        className="p-4 hover:bg-gray-50 transition-colors flex gap-4"
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${getTypeStyles(broadcast.type)}`}
+                        >
+                          {getIcon(broadcast.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="text-sm font-semibold text-gray-900">
+                              {broadcast.title}
+                            </h4>
+                            <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                              {broadcast.date}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {broadcast.message}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase tracking-wide">
+                              {broadcast.category}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">
+                              Recipients {broadcast.recipients}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                              Read {broadcast.readCount} ({broadcast.readRate}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-12 text-center text-gray-500">
+                      <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No broadcasts found matching your criteria.</p>
+                    </div>
+                  )
+                ) : isLoading ? (
                   <div className="p-12 text-center text-gray-500">
                     Loading notifications...
                   </div>
@@ -324,9 +457,7 @@ export function NotificationsPage() {
 
       {/* Broadcast Modal */}
       {isBroadcastOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <h3 className="text-lg font-bold text-gray-900">
@@ -395,12 +526,15 @@ export function NotificationsPage() {
                 className="flex-1 px-4 py-2.5 bg-[#278687] text-white font-bold rounded-xl hover:bg-[#206e6f] transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 disabled={
                   isBroadcastSending ||
+                  isBroadcastSubmitting ||
                   !broadcastTitle.trim() ||
                   !broadcastMessage.trim()
                 }
               >
                 <Send className="w-4 h-4" />
-                {isBroadcastSending ? "Sending..." : "Send Broadcast"}
+                {isBroadcastSending || isBroadcastSubmitting
+                  ? "Sending..."
+                  : "Send Broadcast"}
               </button>
             </div>
           </div>
