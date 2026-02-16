@@ -125,6 +125,49 @@ type AdminChatConversationRes = {
   data: AdminChatConversation[];
 };
 
+export type NotificationType = "info" | "success" | "warning" | "error";
+export type NotificationCategory = "system" | "buyer" | "vendor" | "broadcast";
+
+export interface NotificationApi {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  broadcastId?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BroadcastSummary {
+  broadcastId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  createdAt: string;
+  recipients: number;
+  readCount: number;
+}
+
+export interface CreateNotificationRequest {
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  category?: NotificationCategory;
+}
+
+export interface CreateBroadcastNotificationRequest {
+  target: "all" | "buyers" | "vendors";
+  title: string;
+  message: string;
+  type?: NotificationType;
+  idempotencyKey?: string;
+}
+
 export type TimeRange = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface AnalyticsQueryParams {
@@ -134,7 +177,8 @@ export interface AnalyticsQueryParams {
 // ========================================
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:3000",
+  // baseUrl: `${process.env.VITE_BASE_API_URL}`,
+  baseUrl: import.meta.env.VITE_BASE_API_URL,
   prepareHeaders: (headers) => {
     const token = localStorage?.getItem("accessToken");
 
@@ -154,11 +198,10 @@ const baseQueryWithAuthRedirect: BaseQueryFn<
   const result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
-    localStorage?.removeItem("accessToken");
-
-    if (window.location.pathname !== "/login") {
-      window.location.assign("/login");
-    }
+    // localStorage?.removeItem("accessToken");
+    // if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+    //   window.location.assign("/login");
+    // }
   }
 
   return result;
@@ -177,6 +220,7 @@ export const baseApi = createApi({
     "PendingBuyers",
     "Analytics", // Added Analytics tag
     "AdminChats",
+    "Notifications",
   ],
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
@@ -476,6 +520,154 @@ export const baseApi = createApi({
       }),
       invalidatesTags: ["AdminChats"],
     }),
+
+    /* ---------- NOTIFICATIONS QUERIES ---------- */
+    // NotificationApi[]
+    getNotifications: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi[];
+      },
+      void
+    >({
+      query: () => ({
+        url: "/notifications",
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    getUnreadNotifications: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi[];
+      },
+      void
+    >({
+      query: () => ({
+        url: "/notifications/unread",
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    getBroadcasts: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: BroadcastSummary[];
+      },
+      void
+    >({
+      query: () => ({
+        url: "/notifications/broadcasts",
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    getBroadcastRecipients: builder.query<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi[];
+      },
+      string
+    >({
+      query: (broadcastId) => ({
+        url: `/notifications/broadcasts/${broadcastId}/recipients`,
+        method: "GET",
+      }),
+      providesTags: ["Notifications"],
+    }),
+
+    createNotification: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi;
+      },
+      CreateNotificationRequest
+    >({
+      query: (body) => ({
+        url: "/notifications",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    createNotificationBroadcast: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: { count: number };
+      },
+      CreateBroadcastNotificationRequest
+    >({
+      query: (body) => ({
+        url: "/notifications/broadcast",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    markNotificationRead: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: NotificationApi;
+      },
+      string
+    >({
+      query: (id) => ({
+        url: `/notifications/${id}/read`,
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    markAllNotificationsRead: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: { count: number };
+      },
+      void
+    >({
+      query: () => ({
+        url: "/notifications/read-all",
+        method: "PATCH",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
+
+    deleteNotification: builder.mutation<
+      {
+        success: boolean;
+        statusCode: number;
+        message: string;
+        data: { id: string };
+      },
+      string
+    >({
+      query: (id) => ({
+        url: `/notifications/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Notifications"],
+    }),
   }),
 });
 
@@ -504,4 +696,13 @@ export const {
   useGetAdminChatConversationsQuery,
   useGetAdminChatMessagesQuery,
   useSendAdminChatMessageMutation,
+  useGetNotificationsQuery,
+  useGetUnreadNotificationsQuery,
+  useGetBroadcastsQuery,
+  useGetBroadcastRecipientsQuery,
+  useCreateNotificationMutation,
+  useCreateNotificationBroadcastMutation,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
+  useDeleteNotificationMutation,
 } = baseApi;

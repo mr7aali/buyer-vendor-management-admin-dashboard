@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, Bell, Settings, ChevronDown, Menu } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -6,6 +6,16 @@ import { FullWidthMenu } from "../header/FullWidthMenu";
 import { GlobalSearchDropdown } from "../header/GlobalSearchDropdown";
 import { NotificationsPanel } from "../header/NotificationsPanel";
 import { ProfileDropdown } from "../header/ProfileDropdown";
+import {
+  useGetAllOrdersQuery,
+  useGetAllUsersQuery,
+  useGetAllVendorsQuery,
+  useGetNotificationsQuery,
+  useGetUnreadNotificationsQuery,
+  useMarkAllNotificationsReadMutation,
+  useMarkNotificationReadMutation,
+  type NotificationApi,
+} from "../../redux/features/api/baseApi";
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,61 +23,144 @@ export function Header() {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const { user } = useAuth();
+  const { admin: user } = useAuth();
   const searchRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  // Mock search results
-  const searchResults = [
-    {
-      id: "1",
-      type: "user" as const,
-      title: "Alice Johnson",
-      subtitle: "Buyer • Active",
-      link: "/buyers",
-    },
-    {
-      id: "2",
-      type: "vendor" as const,
-      title: "TechGiant Solutions",
-      subtitle: "Electronics • Verified",
-      link: "/vendors",
-    },
-    {
-      id: "3",
-      type: "order" as const,
-      title: "#ORD-7829",
-      subtitle: "$245.00 • Completed",
-      link: "/orders",
-    },
-  ];
-  // Mock notifications
-  const [notifications, setNotifications] = useState([
-    {
-      id: "1",
-      title: "New Order Received",
-      message: "Order #ORD-7834 received from Michael Smith",
-      time: "2m ago",
-      type: "success" as const,
-      read: false,
-    },
-    {
-      id: "2",
-      title: "Verification Request",
-      message: 'New vendor "Green Earth" submitted KYC documents',
-      time: "1h ago",
-      type: "info" as const,
-      read: false,
-    },
-    {
-      id: "3",
-      title: "Payment Failed",
-      message: "Transaction #TRX-9925 failed for $89.99",
-      time: "3h ago",
-      type: "error" as const,
-      read: true,
-    },
-  ]);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const shouldSearch = debouncedQuery.trim().length >= 2;
+
+  const { data: usersResponse } = useGetAllUsersQuery(
+    shouldSearch
+      ? {
+          search: debouncedQuery,
+          limit: "5",
+        }
+      : {},
+    { skip: !shouldSearch },
+  );
+
+  const { data: vendorsResponse } = useGetAllVendorsQuery(
+    shouldSearch
+      ? {
+          search: debouncedQuery,
+          limit: "5",
+        }
+      : {},
+    { skip: !shouldSearch },
+  );
+
+  const { data: ordersResponse } = useGetAllOrdersQuery(
+    shouldSearch
+      ? {
+          search: debouncedQuery,
+          limit: 5,
+        }
+      : {},
+    { skip: !shouldSearch },
+  );
+
+  const { data: notificationsRaw } = useGetNotificationsQuery();
+  const { data: unreadRaw } = useGetUnreadNotificationsQuery();
+  const [markNotificationRead] = useMarkNotificationReadMutation();
+  const [markAllNotificationsRead] = useMarkAllNotificationsReadMutation();
+
+  const formatRelativeDate = (dateValue: string) => {
+    const date = new Date(dateValue);
+    const diffMs = Date.now() - date.getTime();
+
+    if (Number.isNaN(diffMs)) {
+      return dateValue;
+    }
+
+    const diffSeconds = Math.floor(diffMs / 1000);
+    if (diffSeconds < 60) return "Just now";
+
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const notifications = useMemo(() => {
+    const items = (notificationsRaw?.data || []) as NotificationApi[];
+    return items.map((notification) => ({
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      time: formatRelativeDate(notification.createdAt),
+      type: notification.type ?? "info",
+      read: notification.isRead,
+    }));
+  }, [notificationsRaw]);
+
+  const unreadCount = (unreadRaw?.data || []).length;
+
+  const searchResults = useMemo(() => {
+    if (!shouldSearch) return [];
+
+    const results: Array<{
+      id: string;
+      type: "user" | "vendor" | "order" | "transaction";
+      title: string;
+      subtitle: string;
+      link: string;
+    }> = [];
+
+    const users = usersResponse?.data?.data || [];
+    users.forEach((u) => {
+      const buyerName = u.buyer?.fulllName;
+      const vendorName = u.vendor?.fulllName || u.vendor?.storename;
+      const title = buyerName || vendorName || u.email;
+      const subtitle = `${u.userType} � ${u.email}`;
+
+      const link =
+        u.userType === "buyer" && u.buyer?.id
+          ? `/buyers/${u.buyer.id}`
+          : u.userType === "vendor" && u.vendor?.id
+            ? `/vendors/${u.vendor.id}`
+            : "/buyers";
+
+      results.push({
+        id: u.id,
+        type: "user",
+        title,
+        subtitle,
+        link,
+      });
+    });
+
+    const vendors = vendorsResponse?.data?.items || [];
+    vendors.forEach((v) => {
+      results.push({
+        id: v.id,
+        type: "vendor",
+        title: v.storename || v.businessName || v.fulllName,
+        subtitle: `${v.vendorCode} � ${v.isActive ? "Active" : "Inactive"}`,
+        link: `/vendors/${v.id}`,
+      });
+    });
+
+    const orders = ordersResponse?.data?.data || [];
+    console.log(ordersResponse);
+    orders.forEach((o) => {
+      results.push({
+        id: o.id,
+        type: "order",
+        title: o.orderNumber,
+        subtitle: `${o.status} � ${Number(o.totalAmount).toFixed(2)}`,
+        link: `/orders/${o.id}`,
+      });
+    });
+
+    return results.slice(0, 10);
+  }, [shouldSearch, usersResponse, vendorsResponse, ordersResponse]);
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10);
@@ -75,6 +168,12 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 300);
+    return () => window.clearTimeout(id);
+  }, [searchQuery]);
   // Click outside handlers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -100,27 +199,12 @@ export function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  const handleMarkAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) =>
-        n.id === id
-          ? {
-              ...n,
-              read: true,
-            }
-          : n,
-      ),
-    );
+  const handleMarkAsRead = async (id: string) => {
+    await markNotificationRead(id);
   };
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) => ({
-        ...n,
-        read: true,
-      })),
-    );
+  const handleMarkAllAsRead = async () => {
+    await markAllNotificationsRead();
   };
-  const unreadCount = notifications.filter((n) => !n.read).length;
   return (
     <>
       <header
@@ -221,7 +305,7 @@ export function Header() {
                   />
                   <div className="hidden text-left lg:block">
                     <div className="text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary">
-                      {user?.name || "Guest"}
+                      {user?.fullName || "Guest"}
                     </div>
                     <div className="text-xs text-gray-500">
                       {user?.role || "Admin"}
@@ -238,7 +322,6 @@ export function Header() {
           </div>
         </div>
       </header>
-
       <FullWidthMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
     </>
   );

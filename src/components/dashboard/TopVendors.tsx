@@ -1,8 +1,8 @@
-import React from 'react';
-import { ChevronDown, MoreHorizontal } from 'lucide-react';
-import { VendorPerformance } from '../charts/VendorPerformance';
+import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { VendorPerformance } from "../charts/VendorPerformance";
 export function TopVendors() {
-  return <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)] border border-gray-100 h-full flex flex-col">
+  return (
+    <div className="bg-white rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.06)] border border-gray-100 h-full flex flex-col">
       <div className="flex justify-between items-start mb-6">
         <h3 className="text-lg font-semibold text-gray-900">
           Top Selling Products
@@ -17,7 +17,11 @@ export function TopVendors() {
         <div className="flex items-start justify-between relative z-10">
           <div className="flex gap-4">
             <div className="w-16 h-16 bg-black rounded-xl flex items-center justify-center flex-shrink-0">
-              <img src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=100&h=100&q=80" alt="Apple Watch" className="w-12 h-12 object-contain" />
+              <img
+                src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=100&h=100&q=80"
+                alt="Apple Watch"
+                className="w-12 h-12 object-contain"
+              />
             </div>
             <div>
               <h4 className="text-sm font-bold text-gray-900 mb-1">
@@ -51,5 +55,6 @@ export function TopVendors() {
           <span>Fri</span>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 }

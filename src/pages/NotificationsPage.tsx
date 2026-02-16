@@ -1,127 +1,237 @@
-import React, { useState } from 'react';
-import { Header } from '../components/dashboard/Header';
-import { Search, Bell, Megaphone, Check, Trash2, Info, AlertTriangle, CheckCircle, XCircle, X, Send } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { Header } from "../components/dashboard/Header";
+import {
+  Search,
+  Bell,
+  Megaphone,
+  Check,
+  Trash2,
+  Info,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  X,
+  Send,
+} from "lucide-react";
+import {
+  useCreateNotificationBroadcastMutation,
+  useDeleteNotificationMutation,
+  useGetBroadcastsQuery,
+  useGetNotificationsQuery,
+  useMarkAllNotificationsReadMutation,
+  useMarkNotificationReadMutation,
+  type BroadcastSummary,
+  type NotificationApi,
+} from "../redux/features/api/baseApi";
 
 type Notification = {
   id: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  category: 'system' | 'buyer' | 'vendor' | 'broadcast';
+  type: "info" | "warning" | "success" | "error";
+  category: "system" | "buyer" | "vendor" | "broadcast";
   date: string;
   read: boolean;
 };
 
-const initialNotifications: Notification[] = [{
-  id: '1',
-  title: 'System Maintenance Scheduled',
-  message: 'The platform will undergo maintenance on Oct 30th from 2:00 AM to 4:00 AM UTC.',
-  type: 'info',
-  category: 'system',
-  date: '2 hours ago',
-  read: false
-}, {
-  id: '2',
-  title: 'High Dispute Volume',
-  message: 'Unusual spike in dispute cases detected in Electronics category.',
-  type: 'warning',
-  category: 'system',
-  date: '5 hours ago',
-  read: false
-}, {
-  id: '3',
-  title: 'New Vendor Registration',
-  message: 'TechWorld Ltd. has completed verification and is ready for approval.',
-  type: 'success',
-  category: 'vendor',
-  date: '1 day ago',
-  read: true
-}, {
-  id: '4',
-  title: 'Payment Gateway Error',
-  message: 'Failed transaction rate exceeded 5% threshold in the last hour.',
-  type: 'error',
-  category: 'system',
-  date: '1 day ago',
-  read: true
-}, {
-  id: '5',
-  title: 'Holiday Sale Broadcast',
-  message: 'Promotional message sent to all active buyers regarding upcoming holiday sales.',
-  type: 'info',
-  category: 'broadcast',
-  date: '2 days ago',
-  read: true
-}];
+type BroadcastItem = {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "warning" | "success" | "error";
+  category: "system" | "buyer" | "vendor" | "broadcast";
+  date: string;
+  recipients: number;
+  readCount: number;
+  readRate: number;
+};
+
+const formatRelativeDate = (dateValue: string) => {
+  const date = new Date(dateValue);
+  const diffMs = Date.now() - date.getTime();
+
+  if (Number.isNaN(diffMs)) {
+    return dateValue;
+  }
+
+  const diffSeconds = Math.floor(diffMs / 1000);
+  if (diffSeconds < 60) return "Just now";
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString();
+};
 
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-  const [activeTab, setActiveTab] = useState<'all' | 'system' | 'buyer' | 'vendor' | 'broadcast'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<
+    "all" | "system" | "buyer" | "vendor" | "broadcast"
+  >("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Broadcast Modal State
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
-  const [broadcastTitle, setBroadcastTitle] = useState('');
-  const [broadcastMessage, setBroadcastMessage] = useState('');
-  const [broadcastTarget, setBroadcastTarget] = useState('all');
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastTarget, setBroadcastTarget] = useState("all");
+  const [isBroadcastSubmitting, setIsBroadcastSubmitting] = useState(false);
+
+  const {
+    data: apiNotificationsRaw,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetNotificationsQuery();
+  const apiNotifications = apiNotificationsRaw?.data || [];
+
+  const {
+    data: apiBroadcastsRaw,
+    isLoading: isBroadcastsLoading,
+    isError: isBroadcastsError,
+    refetch: refetchBroadcasts,
+  } = useGetBroadcastsQuery();
+  const apiBroadcasts = apiBroadcastsRaw?.data || [];
+
+  const [markNotificationRead] = useMarkNotificationReadMutation();
+  const [markAllNotificationsRead] = useMarkAllNotificationsReadMutation();
+  const [deleteNotification] = useDeleteNotificationMutation();
+  const [createBroadcast, { isLoading: isBroadcastSending }] =
+    useCreateNotificationBroadcastMutation();
+
+  const notifications = useMemo<Notification[]>(() => {
+    return (apiNotifications as NotificationApi[]).map((notification) => ({
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type ?? "info",
+      category: notification.category ?? "system",
+      date: formatRelativeDate(notification.createdAt),
+      read: notification.isRead,
+    }));
+  }, [apiNotifications]);
+
+  const broadcasts = useMemo<BroadcastItem[]>(() => {
+    return (apiBroadcasts as BroadcastSummary[]).map((broadcast) => {
+      const recipients = broadcast.recipients ?? 0;
+      const readCount = broadcast.readCount ?? 0;
+      const readRate =
+        recipients > 0 ? Math.round((readCount / recipients) * 100) : 0;
+
+      return {
+        id: broadcast.broadcastId,
+        title: broadcast.title,
+        message: broadcast.message,
+        type: broadcast.type ?? "info",
+        category: broadcast.category ?? "broadcast",
+        date: formatRelativeDate(broadcast.createdAt),
+        recipients,
+        readCount,
+        readRate,
+      };
+    });
+  }, [apiBroadcasts]);
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'info': return <Info className="w-5 h-5 text-blue-500" />;
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-orange-500" />;
-      case 'success': return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'error': return <XCircle className="w-5 h-5 text-red-500" />;
-      default: return <Bell className="w-5 h-5 text-gray-500" />;
+      case "info":
+        return <Info className="w-5 h-5 text-blue-500" />;
+      case "warning":
+        return <AlertTriangle className="w-5 h-5 text-orange-500" />;
+      case "success":
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case "error":
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return <Bell className="w-5 h-5 text-gray-500" />;
     }
   };
 
   const getTypeStyles = (type: string) => {
     switch (type) {
-      case 'info': return 'bg-blue-50 border-blue-100';
-      case 'warning': return 'bg-orange-50 border-orange-100';
-      case 'success': return 'bg-green-50 border-green-100';
-      case 'error': return 'bg-red-50 border-red-100';
-      default: return 'bg-gray-50 border-gray-100';
+      case "info":
+        return "bg-blue-50 border-blue-100";
+      case "warning":
+        return "bg-orange-50 border-orange-100";
+      case "success":
+        return "bg-green-50 border-green-100";
+      case "error":
+        return "bg-red-50 border-red-100";
+      default:
+        return "bg-gray-50 border-gray-100";
     }
   };
 
   // Actions
-  const handleMarkAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsRead();
   };
 
-  const handleMarkRead = (id: string) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  const handleMarkRead = async (id: string) => {
+    await markNotificationRead(id);
   };
 
-  const handleDelete = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const handleDelete = async (id: string) => {
+    await deleteNotification(id);
   };
 
-  const handleCreateBroadcast = () => {
-    const newBroadcast: Notification = {
-      id: Date.now().toString(),
-      title: broadcastTitle,
-      message: broadcastMessage,
-      type: 'info',
-      category: 'broadcast',
-      date: 'Just now',
-      read: true
-    };
-    setNotifications([newBroadcast, ...notifications]);
-    setIsBroadcastOpen(false);
-    setBroadcastTitle('');
-    setBroadcastMessage('');
+  const handleCreateBroadcast = async () => {
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
+      return;
+    }
+
+    if (isBroadcastSubmitting || isBroadcastSending) {
+      return;
+    }
+
+    setIsBroadcastSubmitting(true);
+    const idempotencyKey =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    try {
+      await createBroadcast({
+        title: broadcastTitle.trim(),
+        message: broadcastMessage.trim(),
+        target: broadcastTarget as "all" | "buyers" | "vendors",
+        idempotencyKey,
+      }).unwrap();
+      setIsBroadcastOpen(false);
+      setBroadcastTitle("");
+      setBroadcastMessage("");
+    } finally {
+      setIsBroadcastSubmitting(false);
+    }
   };
 
   // Filtering
-  const filteredNotifications = notifications.filter(notification => {
-    const matchesTab = activeTab === 'all' || notification.category === activeTab;
+  const filteredNotifications = notifications.filter((notification) => {
+    const matchesTab =
+      activeTab === "all" || notification.category === activeTab;
     const matchesSearch =
       notification.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       notification.message.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
+
+  const filteredBroadcasts = broadcasts.filter((broadcast) => {
+    const matchesTab = activeTab === "broadcast";
+    const matchesSearch =
+      broadcast.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      broadcast.message.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  const showingCount =
+    activeTab === "broadcast"
+      ? filteredBroadcasts.length
+      : filteredNotifications.length;
 
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -130,8 +240,12 @@ export function NotificationsPage() {
       <main className="max-w-[1600px] mx-auto px-6 pt-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Notifications Center</h1>
-            <p className="text-gray-500">Manage system alerts and broadcast messages to users.</p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              Notifications Center
+            </h1>
+            <p className="text-gray-500">
+              Manage system alerts and broadcast messages to users.
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -156,19 +270,21 @@ export function NotificationsPage() {
           {/* Sidebar / Filters */}
           <div className="lg:col-span-3">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="font-semibold text-gray-900 mb-4 px-2">Categories</h3>
+              <h3 className="font-semibold text-gray-900 mb-4 px-2">
+                Categories
+              </h3>
               <nav className="space-y-1">
                 {[
-                  { id: 'all', label: 'All Notifications', icon: Bell },
-                  { id: 'system', label: 'System Alerts', icon: Info },
-                  { id: 'buyer', label: 'Buyer Updates', icon: CheckCircle },
-                  { id: 'vendor', label: 'Vendor Updates', icon: CheckCircle },
-                  { id: 'broadcast', label: 'Broadcasts', icon: Megaphone }
-                ].map(item => (
+                  { id: "all", label: "All Notifications", icon: Bell },
+                  { id: "system", label: "System Alerts", icon: Info },
+                  { id: "buyer", label: "Buyer Updates", icon: CheckCircle },
+                  { id: "vendor", label: "Vendor Updates", icon: CheckCircle },
+                  { id: "broadcast", label: "Broadcasts", icon: Megaphone },
+                ].map((item) => (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id as any)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === item.id ? 'bg-[#E8F3F1] text-[#278687]' : 'text-gray-600 hover:bg-gray-50'}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === item.id ? "bg-[#E8F3F1] text-[#278687]" : "text-gray-600 hover:bg-gray-50"}`}
                   >
                     <item.icon className="w-4 h-4" />
                     {item.label}
@@ -193,51 +309,141 @@ export function NotificationsPage() {
                   />
                 </div>
                 <div className="text-sm text-gray-500">
-                  Showing {filteredNotifications.length} notifications
+                  Showing {showingCount}{" "}
+                  {activeTab === "broadcast"
+                    ? "broadcasts"
+                    : "notifications"}
                 </div>
               </div>
 
               <div className="divide-y divide-gray-100">
-                {filteredNotifications.length > 0 ? filteredNotifications.map(notification => (
-                  <div key={notification.id} className={`p-4 hover:bg-gray-50 transition-colors flex gap-4 ${!notification.read ? 'bg-blue-50/30' : ''}`}>
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${getTypeStyles(notification.type)}`}>
-                      {getIcon(notification.type)}
+                {activeTab === "broadcast" ? (
+                  isBroadcastsLoading ? (
+                    <div className="p-12 text-center text-gray-500">
+                      Loading broadcasts...
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className={`text-sm font-semibold ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>
-                          {notification.title}
-                        </h4>
-                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">{notification.date}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase tracking-wide">
-                          {notification.category}
-                        </span>
-                        {!notification.read && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">New</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2 justify-center ml-2">
+                  ) : isBroadcastsError ? (
+                    <div className="p-12 text-center text-gray-500">
+                      <p className="mb-3">Failed to load broadcasts.</p>
                       <button
-                        onClick={() => handleMarkRead(notification.id)}
-                        className="p-1.5 text-gray-400 hover:text-[#278687] rounded-md hover:bg-[#E8F3F1] transition-colors"
-                        title="Mark as read"
+                        onClick={() => refetchBroadcasts()}
+                        className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
                       >
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(notification.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
+                        Retry
                       </button>
                     </div>
+                  ) : filteredBroadcasts.length > 0 ? (
+                    filteredBroadcasts.map((broadcast) => (
+                      <div
+                        key={broadcast.id}
+                        className="p-4 hover:bg-gray-50 transition-colors flex gap-4"
+                      >
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${getTypeStyles(broadcast.type)}`}
+                        >
+                          {getIcon(broadcast.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="text-sm font-semibold text-gray-900">
+                              {broadcast.title}
+                            </h4>
+                            <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                              {broadcast.date}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {broadcast.message}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase tracking-wide">
+                              {broadcast.category}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">
+                              Recipients {broadcast.recipients}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                              Read {broadcast.readCount} ({broadcast.readRate}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-12 text-center text-gray-500">
+                      <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No broadcasts found matching your criteria.</p>
+                    </div>
+                  )
+                ) : isLoading ? (
+                  <div className="p-12 text-center text-gray-500">
+                    Loading notifications...
                   </div>
-                )) : (
+                ) : isError ? (
+                  <div className="p-12 text-center text-gray-500">
+                    <p className="mb-3">Failed to load notifications.</p>
+                    <button
+                      onClick={() => refetch()}
+                      className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : filteredNotifications.length > 0 ? (
+                  filteredNotifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-4 hover:bg-gray-50 transition-colors flex gap-4 ${!notification.read ? "bg-blue-50/30" : ""}`}
+                    >
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 border ${getTypeStyles(notification.type)}`}
+                      >
+                        {getIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4
+                            className={`text-sm font-semibold ${!notification.read ? "text-gray-900" : "text-gray-700"}`}
+                          >
+                            {notification.title}
+                          </h4>
+                          <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                            {notification.date}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {notification.message}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600 uppercase tracking-wide">
+                            {notification.category}
+                          </span>
+                          {!notification.read && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                              New
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2 justify-center ml-2">
+                        <button
+                          onClick={() => handleMarkRead(notification.id)}
+                          className="p-1.5 text-gray-400 hover:text-[#278687] rounded-md hover:bg-[#E8F3F1] transition-colors"
+                          title="Mark as read"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(notification.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
                   <div className="p-12 text-center text-gray-500">
                     <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>No notifications found matching your criteria.</p>
@@ -254,7 +460,9 @@ export function NotificationsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-lg font-bold text-gray-900">Create Broadcast</h3>
+              <h3 className="text-lg font-bold text-gray-900">
+                Create Broadcast
+              </h3>
               <button
                 onClick={() => setIsBroadcastOpen(false)}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
@@ -265,7 +473,9 @@ export function NotificationsPage() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Target Audience</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Target Audience
+                </label>
                 <select
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]"
                   value={broadcastTarget}
@@ -278,7 +488,9 @@ export function NotificationsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Title
+                </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]"
@@ -289,7 +501,9 @@ export function NotificationsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Message
+                </label>
                 <textarea
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]"
                   rows={4}
@@ -309,10 +523,18 @@ export function NotificationsPage() {
               </button>
               <button
                 onClick={handleCreateBroadcast}
-                className="flex-1 px-4 py-2.5 bg-[#278687] text-white font-bold rounded-xl hover:bg-[#206e6f] transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-[#278687] text-white font-bold rounded-xl hover:bg-[#206e6f] transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                disabled={
+                  isBroadcastSending ||
+                  isBroadcastSubmitting ||
+                  !broadcastTitle.trim() ||
+                  !broadcastMessage.trim()
+                }
               >
                 <Send className="w-4 h-4" />
-                Send Broadcast
+                {isBroadcastSending || isBroadcastSubmitting
+                  ? "Sending..."
+                  : "Send Broadcast"}
               </button>
             </div>
           </div>
