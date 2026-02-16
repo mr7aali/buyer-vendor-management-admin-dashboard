@@ -174,6 +174,28 @@ export interface AnalyticsQueryParams {
   timeRange?: TimeRange;
   vendorId?: string;
 }
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
 // ========================================
 
 const rawBaseQuery = fetchBaseQuery({
@@ -227,6 +249,28 @@ export const baseApi = createApi({
     adminLogin: builder.mutation<AdminLoginResponse, AdminLoginRequest>({
       query: (body) => ({
         url: "/auth/admin/login",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    adminForgotPassword: builder.mutation<
+      ForgotPasswordResponse,
+      ForgotPasswordRequest
+    >({
+      query: (body) => ({
+        url: "/auth/admin/forgot-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    adminResetPassword: builder.mutation<
+      ResetPasswordResponse,
+      ResetPasswordRequest
+    >({
+      query: (body) => ({
+        url: "/auth/admin/reset-password",
         method: "POST",
         body,
       }),
@@ -674,6 +718,8 @@ export const baseApi = createApi({
 /* ---------- Hooks ---------- */
 export const {
   useAdminLoginMutation,
+  useAdminForgotPasswordMutation,
+  useAdminResetPasswordMutation,
   useGetAllUsersQuery,
   useGetAllVendorsQuery,
   useGetSingleVendorsByIdQuery,

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Timer } from 'lucide-react';
 export function OTPVerificationPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -51,7 +51,9 @@ export function OTPVerificationPage() {
     // Simulate verification
     setTimeout(() => {
       setIsSubmitting(false);
-      navigate('/reset-password');
+      navigate('/reset-password', {
+        state: { email, otp: otp.join('') },
+      });
     }, 1000);
   };
   const handleResend = () => {
