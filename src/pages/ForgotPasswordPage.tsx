@@ -1,38 +1,31 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, AlertCircle } from 'lucide-react';
+import { useAdminForgotPasswordMutation } from '@/redux/features/api/baseApi';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const [adminForgotPassword] = useAdminForgotPasswordMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
-    // Simulate API check
-    setTimeout(() => {
+    try {
+      await adminForgotPassword({ email }).unwrap();
+      navigate('/otp-verification', { state: { email } });
+    } catch (err: any) {
+      setError(
+        err?.data?.message ||
+          'Failed to send verification code. Please try again.',
+      );
+    } finally {
       setIsSubmitting(false);
-
-      // Logic requirement:
-      // If Sub-Admin -> Contact Main Admin
-      // If Main Admin -> Contact Super Admin
-
-      const lowerEmail = email.toLowerCase();
-
-      if (lowerEmail.includes('super')) {
-        // Allow Super Admin to reset (simulated)
-        navigate('/otp-verification', { state: { email } });
-      } else if (lowerEmail.includes('sub')) {
-        setError("As a Sub-Admin, you must contact the Main Admin to reset your password.");
-      } else {
-        // Default to Main Admin
-        setError("As a Main Admin, you must contact the Super Admin to reset your password.");
-      }
-    }, 1000);
+    }
   };
 
   return (
