@@ -85,7 +85,7 @@ export function ChatsPage() {
 
   useEffect(() => {
     const normalizedMessages = Array.isArray(messagesDataRw?.data)
-      ? messagesDataRw.data
+      ? messagesDataRw?.data
       : Array.isArray(messagesDataRw)
         ? messagesDataRw
         : [];
@@ -109,7 +109,7 @@ export function ChatsPage() {
     const token = localStorage?.getItem("accessToken");
     if (!token) return;
 
-    const socket = io("http://localhost:3000/admin-chats", {
+    const socket = io(`${process.env.VITE_BASE_API_URL}/admin-chats`, {
       auth: { token },
     });
     socketRef.current = socket;
@@ -226,12 +226,12 @@ export function ChatsPage() {
           </p>
         </div>
 
-        <div className="grid flex-1 min-h-0 grid-cols-12 gap-6">
+        <div className="grid min-h-0 flex-1 grid-cols-12 gap-6">
           {/* Sidebar List */}
-          <div className="flex flex-col col-span-12 overflow-hidden bg-white border border-gray-100 shadow-sm lg:col-span-4 rounded-2xl">
-            <div className="p-4 space-y-4 border-b border-gray-100">
+          <div className="col-span-12 flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm lg:col-span-4">
+            <div className="space-y-4 border-b border-gray-100 p-4">
               <div className="relative">
-                <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search messages..."
@@ -240,7 +240,7 @@ export function ChatsPage() {
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687]"
                 />
               </div>
-              <div className="flex gap-2 pb-2 overflow-x-auto">
+              <div className="flex gap-2 overflow-x-auto pb-2">
                 {["all", "user", "vendor", "complaint"].map((f) => (
                   <button
                     key={f}
@@ -274,7 +274,7 @@ export function ChatsPage() {
                     onClick={() => setSelectedThreadId(chat.threadId)}
                     className={`p-4 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${selectedThreadId === chat.threadId ? "bg-[#E8F3F1]/30 border-l-4 border-l-[#278687]" : "border-l-4 border-l-transparent"}`}
                   >
-                    <div className="flex items-start justify-between mb-1">
+                    <div className="mb-1 flex items-start justify-between">
                       <div className="flex items-center gap-2">
                         <h3
                           className={`font-medium text-sm ${selectedThreadId === chat.threadId ? "text-[#278687]" : "text-gray-900"}`}
@@ -282,13 +282,13 @@ export function ChatsPage() {
                           {chat.participant.name}
                         </h3>
                         {type === "complaint" && (
-                          <AlertCircle className="w-3 h-3 text-red-500" />
+                          <AlertCircle className="h-3 w-3 text-red-500" />
                         )}
                       </div>
                       <span className="text-xs text-gray-400">{lastTime}</span>
                     </div>
                     <div className="flex items-end justify-between">
-                      <p className="flex-1 mr-2 text-xs text-gray-500 line-clamp-1">
+                      <p className="mr-2 line-clamp-1 flex-1 text-xs text-gray-500">
                         {lastMsg}
                       </p>
                       {chat.unreadCount > 0 && (
@@ -304,7 +304,7 @@ export function ChatsPage() {
           </div>
 
           {/* Chat Area */}
-          <div className="h-full col-span-12 lg:col-span-8">
+          <div className="col-span-12 h-full lg:col-span-8">
             {activeChat ? (
               <ChatInterface
                 recipientName={activeChat.participant.name}
@@ -317,11 +317,11 @@ export function ChatsPage() {
                 onSendMessage={handleSendMessage}
               />
             ) : messagesLoading ? (
-              <div className="flex items-center justify-center h-full text-gray-400 bg-white border border-gray-100 shadow-sm rounded-2xl">
+              <div className="flex h-full items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm">
                 Loading conversation...
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-400 bg-white border border-gray-100 shadow-sm rounded-2xl">
+              <div className="flex h-full items-center justify-center rounded-2xl border border-gray-100 bg-white text-gray-400 shadow-sm">
                 Select a conversation to start messaging
               </div>
             )}

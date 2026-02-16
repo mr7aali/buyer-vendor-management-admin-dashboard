@@ -177,7 +177,8 @@ export interface AnalyticsQueryParams {
 // ========================================
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:3000",
+  // baseUrl: `${process.env.VITE_BASE_API_URL}`,
+  baseUrl: import.meta.env.VITE_BASE_API_URL,
   prepareHeaders: (headers) => {
     const token = localStorage?.getItem("accessToken");
 
@@ -198,7 +199,7 @@ const baseQueryWithAuthRedirect: BaseQueryFn<
 
   if (result.error && result.error.status === 401) {
     // localStorage?.removeItem("accessToken");
-    // if (window.location.pathname !== "/login") {
+    // if (typeof window !== "undefined" && window.location.pathname !== "/login") {
     //   window.location.assign("/login");
     // }
   }
