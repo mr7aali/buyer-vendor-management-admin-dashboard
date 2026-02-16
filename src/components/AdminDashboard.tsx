@@ -15,6 +15,66 @@ import { useGetDashboardOverviewQuery } from "@/redux/features/api/dashboardApi"
 
 // Dashboard-specific mock data
 
+function SkeletonBlock({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-xl bg-gray-200/80 ${className}`} />;
+}
+
+function DashboardSkeleton() {
+  return (
+    <>
+      <div className="mb-8">
+        <SkeletonBlock className="mb-3 h-8 w-72" />
+        <SkeletonBlock className="h-4 w-96 max-w-full" />
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+          >
+            <div className="mb-6 flex items-center justify-between">
+              <SkeletonBlock className="h-4 w-24" />
+              <SkeletonBlock className="h-10 w-10 rounded-lg" />
+            </div>
+            <SkeletonBlock className="mb-2 h-8 w-24" />
+            <SkeletonBlock className="mb-4 h-4 w-20" />
+            <SkeletonBlock className="h-4 w-28" />
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className="h-full rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+          >
+            <SkeletonBlock className="mb-5 h-5 w-36" />
+            <div className="space-y-4">
+              <SkeletonBlock className="h-4 w-full" />
+              <SkeletonBlock className="h-4 w-11/12" />
+              <SkeletonBlock className="h-4 w-10/12" />
+              <SkeletonBlock className="h-10 w-32 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-8 grid grid-cols-12 gap-6">
+        <div className="col-span-12 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-6">
+          <SkeletonBlock className="mb-4 h-5 w-44" />
+          <SkeletonBlock className="h-72 w-full rounded-2xl" />
+        </div>
+        <div className="col-span-12 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm lg:col-span-6">
+          <SkeletonBlock className="mb-4 h-5 w-40" />
+          <SkeletonBlock className="h-72 w-full rounded-2xl" />
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function AdminDashboard() {
   const { data, isLoading } = useGetDashboardOverviewQuery();
 
@@ -30,6 +90,10 @@ export function AdminDashboard() {
       <Header />
 
       <main className="max-w-[1600px] mx-auto px-6 pt-8">
+        {isLoading ? (
+          <DashboardSkeleton />
+        ) : (
+          <>
         <div className="mb-8">
           <h1 className="mb-2 text-2xl font-bold text-gray-900">
             Dashboard Overview
@@ -341,6 +405,8 @@ export function AdminDashboard() {
             </div>
           </div>
         </div>
+          </>
+        )}
       </main>
     </div>
   );
