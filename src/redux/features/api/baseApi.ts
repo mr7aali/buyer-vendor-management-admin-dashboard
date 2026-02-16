@@ -184,6 +184,18 @@ export interface ForgotPasswordResponse {
   message: string;
   email: string;
 }
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
 // ========================================
 
 const rawBaseQuery = fetchBaseQuery({
@@ -248,6 +260,17 @@ export const baseApi = createApi({
     >({
       query: (body) => ({
         url: "/auth/admin/forgot-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    adminResetPassword: builder.mutation<
+      ResetPasswordResponse,
+      ResetPasswordRequest
+    >({
+      query: (body) => ({
+        url: "/auth/admin/reset-password",
         method: "POST",
         body,
       }),
@@ -696,6 +719,7 @@ export const baseApi = createApi({
 export const {
   useAdminLoginMutation,
   useAdminForgotPasswordMutation,
+  useAdminResetPasswordMutation,
   useGetAllUsersQuery,
   useGetAllVendorsQuery,
   useGetSingleVendorsByIdQuery,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Lock, Eye, EyeOff } from 'lucide-react';
+import { useAdminResetPasswordMutation } from '@/redux/features/api/baseApi';
 export function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -9,9 +10,20 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [adminResetPassword] = useAdminResetPasswordMutation();
+  const email = (location.state as any)?.email;
+  const otp = (location.state as any)?.otp;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!email || !otp) {
+      setError('Session expired. Please start from forgot password again.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
@@ -21,11 +33,22 @@ export function ResetPasswordPage() {
       return;
     }
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+
+    try {
+      await adminResetPassword({
+        email,
+        otp,
+        newPassword: password,
+        confirmPassword,
+      }).unwrap();
       navigate('/reset-success');
-    }, 1000);
+    } catch (err: any) {
+      setError(
+        err?.data?.message || 'Failed to reset password. Please try again.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   return <div className="min-h-screen bg-[#E8F3F1] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
