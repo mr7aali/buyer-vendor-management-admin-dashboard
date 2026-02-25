@@ -37,7 +37,7 @@ export type OrderResponse = {
     }>;
     buyer: {
       id: string;
-      fulllName: string;
+      fullName: string;
       phone: string;
       user: {
         id: string;
@@ -46,7 +46,7 @@ export type OrderResponse = {
     };
     vendor: {
       id: string;
-      fulllName: string;
+      fullName: string;
       phone: string;
       businessName: string | null;
       vendorCode: string;
@@ -56,8 +56,30 @@ export type OrderResponse = {
         email: string;
       };
     };
-    payments: null;
-    coupon: null;
+    payments: {
+      id: string;
+      orderId: string;
+      stripePaymentId: string | null;
+      stripeCustomerId: string | null;
+      amount: string;
+      adminCommissionAmount: string;
+      vendorPayoutAmount: string;
+      createdAt: string;
+      updatedAt: string;
+      status: string;
+      paymentMethod: string | null;
+      lastFourDigits: string | null;
+      cardBrand: string | null;
+      expiresAt: string | null;
+    } | null;
+    coupon: {
+      id: string;
+      code: string | null;
+      discountType: string;
+      discountValue: string;
+      minPurchaseAmount: string | null;
+      maxDiscountAmount: string | null;
+    } | null;
     _count: {
       items: number;
       productReviews: number;
