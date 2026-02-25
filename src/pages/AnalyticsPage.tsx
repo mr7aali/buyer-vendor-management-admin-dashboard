@@ -17,12 +17,39 @@ import {
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { TimeRange, useGetAnalyticsQuery } from "@/redux/features/api/baseApi";
-// import { useGetAnalyticsQuery, TimeRange } from "../redux/baseApi";
+
+const formatCurrency = (value: number) =>
+  `$${value.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+
+const formatSignedPercent = (value: number) => `${value >= 0 ? "+" : ""}${value}%`;
+
+const formatRangeLabel = (range: TimeRange) =>
+  `${range.charAt(0).toUpperCase()}${range.slice(1)}`;
+
+const getQueryErrorMessage = (error: unknown) => {
+  if (!error || typeof error !== "object" || !("data" in error)) {
+    return "Unable to fetch analytics data";
+  }
+
+  const data = error.data;
+  if (!data || typeof data !== "object" || !("message" in data)) {
+    return "An error occurred";
+  }
+
+  const message = data.message;
+  return typeof message === "string" && message.trim().length > 0
+    ? message
+    : "An error occurred";
+};
 
 export function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("monthly");
   const [showExportModal, setShowExportModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Fetch analytics data using your existing baseApi
   const {
@@ -34,26 +61,49 @@ export function AnalyticsPage() {
     isFetching,
   } = useGetAnalyticsQuery({ timeRange });
   const analyticsData = analyticsRawData?.data;
+  const analyticsErrorMessage = getQueryErrorMessage(error);
+
+  const closeExportModal = () => {
+    setShowExportModal(false);
+    setExportError(null);
+  };
+
+  const openExportModal = () => {
+    setExportError(null);
+    setShowExportModal(true);
+  };
+
   const handleExport = async () => {
+    if (isExporting) return;
+
+    const element = document.getElementById("pdf-report-content");
+    if (!element) {
+      setExportError("Report content is not ready yet. Please try again.");
+      return;
+    }
+
     setIsExporting(true);
+    setExportError(null);
+
+    const originalStyles = {
+      overflow: element.style.overflow,
+      maxHeight: element.style.maxHeight,
+      height: element.style.height,
+    };
 
     try {
-      const element = document.getElementById("pdf-report-content");
-      if (!element) {
-        throw new Error("Report content not found");
-      }
-
-      const originalOverflow = element.style.overflow;
-      const originalMaxHeight = element.style.maxHeight;
-
       element.style.overflow = "visible";
       element.style.maxHeight = "none";
+      element.style.height = "auto";
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
 
-      const opt = {
+      const filenameDate = new Date().toISOString().split("T")[0];
+      const options = {
         margin: 10,
-        filename: `Analytics_Report_${timeRange}_${new Date().toISOString().split("T")[0]}.pdf`,
+        filename: `Analytics_Report_${timeRange}_${filenameDate}.pdf`,
         image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: {
           scale: 2,
@@ -63,27 +113,19 @@ export function AnalyticsPage() {
           windowHeight: element.scrollHeight,
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] as any },
+        pagebreak: { mode: ["css", "legacy"] },
       };
 
-      await html2pdf().from(element).set(opt).save();
-
-      element.style.overflow = originalOverflow;
-      element.style.maxHeight = originalMaxHeight;
-
+      await html2pdf().from(element).set(options).save();
+      closeExportModal();
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      setExportError("Failed to generate PDF. Please try again.");
+    } finally {
+      element.style.overflow = originalStyles.overflow;
+      element.style.maxHeight = originalStyles.maxHeight;
+      element.style.height = originalStyles.height;
       setIsExporting(false);
-      setShowExportModal(false);
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-
-      const element = document.getElementById("pdf-report-content");
-      if (element) {
-        element.style.overflow = "";
-        element.style.maxHeight = "";
-      }
-
-      setIsExporting(false);
-      alert("Failed to generate PDF. Please try again.");
     }
   };
 
@@ -117,9 +159,7 @@ export function AnalyticsPage() {
                 Failed to load analytics
               </h3>
               <p className="mb-4 text-gray-600">
-                {error && "data" in error
-                  ? (error.data as any)?.message || "An error occurred"
-                  : "Unable to fetch analytics data"}
+                {analyticsErrorMessage}
               </p>
               <button
                 onClick={() => refetch()}
@@ -139,7 +179,6 @@ export function AnalyticsPage() {
     return null;
   }
 
-  // Extract data from response
   const currentData = {
     revenue: analyticsData.revenue.data,
     users: analyticsData.users.data,
@@ -149,16 +188,17 @@ export function AnalyticsPage() {
 
   // Calculate KPIs
   const totalRevenue = analyticsData.revenue.totalRevenue || 0;
+  const totalRevenueChange = analyticsData.revenue.totalRevenueChange || 0;
   const totalOrders = analyticsData.orders.data.reduce(
     (sum, item) => sum + item.orders,
     0,
   );
   const totalUsers = analyticsData.users.totalUsers || 0;
+  const totalUsersChange = analyticsData.users.totalUsersChange || 0;
   const growthRate = Math.round(
-    (analyticsData.revenue.totalRevenueChange +
-      analyticsData.users.totalUsersChange) /
-      2,
+    (totalRevenueChange + totalUsersChange) / 2,
   );
+  const reportGeneratedAt = new Date().toLocaleString();
 
   return (
     <div className="min-h-screen bg-[#E8F3F1] font-sans text-gray-900 pb-12">
@@ -211,7 +251,7 @@ export function AnalyticsPage() {
 
             {/* Export Button */}
             <button
-              onClick={() => setShowExportModal(true)}
+              onClick={openExportModal}
               className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm w-full sm:w-auto"
             >
               <Download className="h-4 w-4" />
@@ -299,23 +339,26 @@ export function AnalyticsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowExportModal(false)}
+            onClick={() => {
+              if (!isExporting) {
+                closeExportModal();
+              }
+            }}
           />
           <div className="relative bg-white rounded-xl sm:rounded-2xl shadow-xl w-full max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
-            {/* Modal content - keeping it short for brevity */}
             <div className="flex items-center justify-between border-b border-gray-100 bg-gradient-to-r from-primary/5 to-transparent p-4 sm:p-6">
               <div>
                 <h3 className="text-lg font-bold text-gray-900 sm:text-2xl">
                   Analytics Report Preview
                 </h3>
                 <p className="mt-1 text-xs text-gray-500 sm:text-sm">
-                  {timeRange.charAt(0).toUpperCase() + timeRange.slice(1)}{" "}
-                  Report
+                  {formatRangeLabel(timeRange)} Report
                 </p>
               </div>
               <button
-                onClick={() => setShowExportModal(false)}
-                className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+                onClick={closeExportModal}
+                disabled={isExporting}
+                className="rounded-lg p-2 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <X className="h-4 w-4 text-gray-500 sm:h-5 sm:w-5" />
               </button>
@@ -325,18 +368,308 @@ export function AnalyticsPage() {
               className="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-140px)] sm:max-h-[calc(90vh-180px)]"
               id="pdf-report-content"
             >
-              {/* Your existing modal content here */}
-              <div className="p-8 text-center">
-                <p className="text-gray-600">
-                  Report content would be rendered here...
-                </p>
+              <div className="space-y-6 bg-white">
+                <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-semibold text-gray-900 sm:text-xl">
+                        Analytics {formatRangeLabel(timeRange)} Report
+                      </h4>
+                      <p className="mt-1 text-xs text-gray-500 sm:text-sm">
+                        Generated: {reportGeneratedAt}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                      {timeRange}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Total Revenue
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-gray-900">
+                      {formatCurrency(totalRevenue)}
+                    </p>
+                    <p
+                      className={`mt-1 text-xs font-medium ${
+                        totalRevenueChange >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {formatSignedPercent(totalRevenueChange)} vs previous
+                      period
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Active Users
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-gray-900">
+                      {totalUsers.toLocaleString()}
+                    </p>
+                    <p
+                      className={`mt-1 text-xs font-medium ${
+                        totalUsersChange >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {formatSignedPercent(totalUsersChange)} vs previous period
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Total Orders
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-gray-900">
+                      {totalOrders.toLocaleString()}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-gray-600">
+                      From {currentData.orders.length} data points
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Growth Rate
+                    </p>
+                    <p className="mt-2 text-xl font-bold text-gray-900">
+                      {growthRate}%
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-gray-600">
+                      Avg. revenue and user growth
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200">
+                  <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                    <h5 className="text-sm font-semibold text-gray-900">
+                      Revenue Performance
+                    </h5>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-gray-600">
+                            Period
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium text-gray-600">
+                            Revenue
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium text-gray-600">
+                            Profit
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {currentData.revenue.length > 0 ? (
+                          currentData.revenue.map((item) => (
+                            <tr key={`revenue-${item.name}`}>
+                              <td className="px-4 py-2 text-gray-700">
+                                {item.name}
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900">
+                                {formatCurrency(item.revenue)}
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900">
+                                {formatCurrency(item.profit)}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={3}
+                              className="px-4 py-4 text-center text-gray-500"
+                            >
+                              No revenue data available
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  <div className="rounded-xl border border-gray-200">
+                    <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                      <h5 className="text-sm font-semibold text-gray-900">
+                        User Growth
+                      </h5>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-medium text-gray-600">
+                              Period
+                            </th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-600">
+                              Buyers
+                            </th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-600">
+                              Vendors
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 bg-white">
+                          {currentData.users.length > 0 ? (
+                            currentData.users.map((item) => (
+                              <tr key={`users-${item.name}`}>
+                                <td className="px-4 py-2 text-gray-700">
+                                  {item.name}
+                                </td>
+                                <td className="px-4 py-2 text-right text-gray-900">
+                                  {item.buyers.toLocaleString()}
+                                </td>
+                                <td className="px-4 py-2 text-right text-gray-900">
+                                  {item.vendors.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={3}
+                                className="px-4 py-4 text-center text-gray-500"
+                              >
+                                No user growth data available
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200">
+                    <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                      <h5 className="text-sm font-semibold text-gray-900">
+                        Order Growth
+                      </h5>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-medium text-gray-600">
+                              Period
+                            </th>
+                            <th className="px-4 py-2 text-right font-medium text-gray-600">
+                              Orders
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 bg-white">
+                          {currentData.orders.length > 0 ? (
+                            currentData.orders.map((item) => (
+                              <tr key={`orders-${item.name}`}>
+                                <td className="px-4 py-2 text-gray-700">
+                                  {item.name}
+                                </td>
+                                <td className="px-4 py-2 text-right text-gray-900">
+                                  {item.orders.toLocaleString()}
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td
+                                colSpan={2}
+                                className="px-4 py-4 text-center text-gray-500"
+                              >
+                                No order growth data available
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-gray-200">
+                  <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                    <h5 className="text-sm font-semibold text-gray-900">
+                      Sales Distribution
+                    </h5>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left font-medium text-gray-600">
+                            Category
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium text-gray-600">
+                            Value
+                          </th>
+                          <th className="px-4 py-2 text-right font-medium text-gray-600">
+                            Growth
+                          </th>
+                          <th className="px-4 py-2 text-left font-medium text-gray-600">
+                            Description
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {currentData.categories.length > 0 ? (
+                          currentData.categories.map((item) => (
+                            <tr key={`category-${item.name}`}>
+                              <td className="px-4 py-2 font-medium text-gray-700">
+                                {item.name}
+                              </td>
+                              <td className="px-4 py-2 text-right text-gray-900">
+                                {item.value.toLocaleString()}
+                              </td>
+                              <td
+                                className={`px-4 py-2 text-right font-medium ${
+                                  item.growth.startsWith("-")
+                                    ? "text-red-600"
+                                    : "text-emerald-600"
+                                }`}
+                              >
+                                {item.growth}
+                              </td>
+                              <td className="px-4 py-2 text-gray-600">
+                                {item.description}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={4}
+                              className="px-4 py-4 text-center text-gray-500"
+                            >
+                              No category data available
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </div>
 
+            {exportError && (
+              <div className="mx-3 mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 sm:mx-6 sm:mb-4">
+                {exportError}
+              </div>
+            )}
+
             <div className="sticky bottom-0 flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-3 sm:flex-row sm:p-4">
               <button
-                onClick={() => setShowExportModal(false)}
-                className="flex-1 rounded-xl border border-gray-300 py-3 font-medium text-gray-700 transition-colors hover:bg-white"
+                onClick={closeExportModal}
+                disabled={isExporting}
+                className="flex-1 rounded-xl border border-gray-300 py-3 font-medium text-gray-700 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
