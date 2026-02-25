@@ -1,49 +1,142 @@
-import React, { useState } from 'react';
-import { Header } from '../components/dashboard/Header';
-import { StatusBadge, StatusType } from '../components/ui/StatusBadge';
-import { Search, Download, ArrowRight, Shield, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { mockTransactions } from '../data/mockTransactions';
-import { ExportReportModal } from '../components/transactions/ExportReportModal';
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Download,
+  ArrowRight,
+  CreditCard,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
+import { Header } from "../components/dashboard/Header";
+import { ExportReportModal } from "../components/transactions/ExportReportModal";
+import { StatusBadge, type StatusType } from "../components/ui/StatusBadge";
+import {
+  useGetAdminTransactionsQuery,
+  type AdminTransaction,
+} from "@/redux/features/api/baseApi";
+
+function mapStatusToBadge(status: string): StatusType {
+  const normalized = status.toLowerCase();
+
+  if (
+    normalized.includes("succeed") ||
+    normalized.includes("paid") ||
+    normalized.includes("complete")
+  ) {
+    return "completed";
+  }
+  if (normalized.includes("process") || normalized.includes("progress")) {
+    return "in-progress";
+  }
+  if (normalized.includes("cancel")) {
+    return "cancelled";
+  }
+  if (normalized.includes("fail") || normalized.includes("decline")) {
+    return "failed";
+  }
+
+  return "pending";
+}
+
+function formatLabel(value: string): string {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function getBuyerName(transaction: AdminTransaction): string {
+  return transaction.order.buyer.fullName || transaction.order.buyer.user.email;
+}
+
+function getVendorName(transaction: AdminTransaction): string {
+  return (
+    transaction.order.vendor.businessName ||
+    transaction.order.vendor.storename ||
+    transaction.order.vendor.fullName
+  );
+}
+
+function formatPaymentMethod(transaction: AdminTransaction): string {
+  const parts: string[] = [];
+  if (transaction.cardBrand) {
+    parts.push(transaction.cardBrand.toUpperCase());
+  }
+  if (transaction.paymentMethod) {
+    parts.push(formatLabel(transaction.paymentMethod));
+  }
+  if (transaction.lastFourDigits) {
+    parts.push(`**** ${transaction.lastFourDigits}`);
+  }
+
+  return parts.length > 0 ? parts.join(" ") : "Not Available";
+}
 
 export function TransactionsPage() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  // Helper to map status string to StatusType
-  const getStatusType = (status: string): StatusType => {
-    const map: Record<string, StatusType> = {
-      'completed': 'completed',
-      'pending': 'pending',
-      'in-progress': 'in-progress',
-      'cancelled': 'cancelled',
-      'processing': 'in-progress',
-    };
-    return map[status.toLowerCase()] || 'pending';
-  };
+  const queryParams = useMemo(
+    () => ({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: searchQuery.trim() || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      sortBy: "createdAt" as const,
+      sortOrder: "desc" as const,
+    }),
+    [currentPage, itemsPerPage, searchQuery, statusFilter],
+  );
 
-  const filteredTransactions = mockTransactions.filter(tx => {
-    const matchesSearch =
-      tx.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.buyer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.vendor.toLowerCase().includes(searchQuery.toLowerCase());
+  const { data, isLoading, isFetching, isError, refetch } =
+    useGetAdminTransactionsQuery(queryParams, {
+      refetchOnMountOrArgChange: true,
+    });
 
-    const matchesStatus = statusFilter === 'all' || tx.status.toLowerCase() === statusFilter.toLowerCase();
+  const transactions = data?.data.items ?? [];
+  const meta = data?.data.meta;
+  const totalPages = meta?.totalPages ?? 0;
+  const totalRecords = meta?.total ?? 0;
+  const startIndex =
+    meta && transactions.length > 0 ? (meta.page - 1) * meta.limit + 1 : 0;
+  const endIndex = startIndex > 0 ? startIndex + transactions.length - 1 : 0;
 
-    return matchesSearch && matchesStatus;
-  });
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
 
-  // Pagination Logic
-  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
+    const pages = new Set<number>([1, totalPages]);
+    for (let page = currentPage - 2; page <= currentPage + 2; page += 1) {
+      if (page > 1 && page < totalPages) {
+        pages.add(page);
+      }
+    }
+
+    return Array.from(pages).sort((a, b) => a - b);
+  }, [currentPage, totalPages]);
+
+  const exportData = useMemo(
+    () =>
+      transactions.map((transaction) => ({
+        id: transaction.id,
+        date: new Date(transaction.createdAt).toLocaleString(),
+        buyer: getBuyerName(transaction),
+        vendor: getVendorName(transaction),
+        amount: transaction.amount,
+        payout: transaction.vendorPayoutAmount,
+        status: formatLabel(transaction.status),
+      })),
+    [transactions],
+  );
 
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
       setCurrentPage(page);
     }
   };
@@ -56,7 +149,7 @@ export function TransactionsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Transactions & Escrow
+              Transactions and Escrow
             </h1>
             <p className="text-gray-500">
               Monitor payments, escrow holdings, and vendor payouts.
@@ -74,7 +167,6 @@ export function TransactionsPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-h-[600px]">
-          {/* Filters */}
           <div className="p-4 border-b border-gray-100 flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -82,26 +174,37 @@ export function TransactionsPage() {
                 type="text"
                 placeholder="Search transactions..."
                 value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#278687]/20 focus:border-[#278687]"
               />
             </div>
             <div className="flex gap-4">
               <select
                 value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setCurrentPage(1);
+                }}
                 className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value="all">All Status</option>
-                <option value="completed">Completed</option>
                 <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="processing">Processing</option>
+                <option value="succeeded">Succeeded</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+                <option value="cancel">Canceled</option>
               </select>
 
               <select
                 value={itemsPerPage}
-                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                onChange={(event) => {
+                  setItemsPerPage(Number(event.target.value));
+                  setCurrentPage(1);
+                }}
                 className="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 <option value={10}>10 per page</option>
@@ -112,117 +215,181 @@ export function TransactionsPage() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto flex-1">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parties</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payout</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Info</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Transaction ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Parties
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Commission
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Payout
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Payment Info
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Action
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginatedTransactions.length > 0 ? (
-                  paginatedTransactions.map(tx => (
-                    <tr
-                      key={tx.id}
-                      className="hover:bg-gray-50 group cursor-pointer transition-colors"
-                      onClick={() => navigate(`/transactions/${tx.id}`)}
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-[#278687]">{tx.id}</span>
-                            {tx.type === 'escrow' && (
-                              <span title="Escrow Protected">
-                                <Shield className="w-3 h-3 text-gray-400" />
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-gray-500">{tx.orderId}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-xs text-gray-500">
-                          From: <span className="text-gray-900 font-medium">{tx.buyer}</span>
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          To: <span className="text-gray-900 font-medium">{tx.vendor}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-gray-900">
-                        ${tx.amount.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        ${tx.commission.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-green-600">
-                        ${tx.payout.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-                            <CreditCard className="w-3 h-3 text-gray-400" />
-                            {tx.paymentMethod}
-                          </div>
-                          <div className="text-[10px] text-gray-500">Buyer: {tx.buyerBank}</div>
-                          <div className="text-[10px] text-gray-500">Vendor: {tx.vendorBank}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={getStatusType(tx.status)} />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-[#278687] hover:bg-[#E8F3F1] rounded-lg transition-colors">
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
+                {(isLoading || isFetching) && transactions.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                      No transactions found matching your filters.
+                    <td
+                      colSpan={8}
+                      className="px-6 py-10 text-center text-gray-500"
+                    >
+                      <div className="inline-flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading transactions...
+                      </div>
                     </td>
                   </tr>
                 )}
+
+                {isError && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-6 py-10 text-center text-gray-500"
+                    >
+                      <p className="mb-3">Failed to load transactions.</p>
+                      <button
+                        onClick={() => refetch()}
+                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                )}
+
+                {!isError && transactions.length > 0
+                  ? transactions.map((transaction) => (
+                      <tr
+                        key={transaction.id}
+                        className="hover:bg-gray-50 group cursor-pointer transition-colors"
+                        onClick={() =>
+                          navigate(`/transactions/${transaction.id}`)
+                        }
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-[#278687]">
+                              {transaction.id}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {transaction.order.orderNumber}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-xs text-gray-500">
+                            From:{" "}
+                            <span className="text-gray-900 font-medium">
+                              {getBuyerName(transaction)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            To:{" "}
+                            <span className="text-gray-900 font-medium">
+                              {getVendorName(transaction)}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-bold text-gray-900">
+                          ${transaction.amount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          ${transaction.adminCommissionAmount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-green-600">
+                          ${transaction.vendorPayoutAmount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
+                              <CreditCard className="w-3 h-3 text-gray-400" />
+                              {formatPaymentMethod(transaction)}
+                            </div>
+                            <div className="text-[10px] text-gray-500">
+                              Stripe: {transaction.stripePaymentId || "N/A"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-1">
+                            <StatusBadge
+                              status={mapStatusToBadge(transaction.status)}
+                            />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button className="inline-flex items-center justify-center p-2 text-gray-400 hover:text-[#278687] hover:bg-[#E8F3F1] rounded-lg transition-colors">
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  : null}
+
+                {!isLoading &&
+                  !isFetching &&
+                  !isError &&
+                  transactions.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-6 py-8 text-center text-gray-500"
+                      >
+                        No transactions found matching your filters.
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination Controls */}
-          {filteredTransactions.length > 0 && (
+          {totalRecords > 0 && (
             <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white">
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span>
-                  Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length}
+                  Showing {startIndex}-{endIndex} of {totalRecords}
                 </span>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isFetching}
                   className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  {pageNumbers.map((page) => (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                        ? 'bg-[#278687] text-white'
-                        : 'text-gray-600 hover:bg-gray-50'
-                        }`}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? "bg-[#278687] text-white"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
                     >
                       {page}
                     </button>
@@ -231,7 +398,7 @@ export function TransactionsPage() {
 
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages || isFetching}
                   className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -240,11 +407,11 @@ export function TransactionsPage() {
             </div>
           )}
         </div>
-        {/* Export Modal */}
+
         <ExportReportModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
-          data={filteredTransactions}
+          data={exportData}
           reportType="transactions"
         />
       </main>

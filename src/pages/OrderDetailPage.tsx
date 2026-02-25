@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Header } from "../components/dashboard/Header";
-import { StatusBadge, type StatusType } from "../components/ui/StatusBadge";
+import { StatusBadge } from "../components/ui/StatusBadge";
 import { OrderTimeline } from "../components/orders/OrderTimeline";
 
 import {
@@ -19,13 +19,10 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const { data, isLoading, isError } = useGetAdminOrderDetailsQuery(
-    id || "",
-    {
-      skip: !id,
-      refetchOnMountOrArgChange: true,
-    },
-  );
+  const { data, isLoading, isError } = useGetAdminOrderDetailsQuery(id || "", {
+    skip: !id,
+    refetchOnMountOrArgChange: true,
+  });
 
   // Loading state
   if (isLoading) {
@@ -75,7 +72,7 @@ export function OrderDetailPage() {
   const paymentMethodLabel = (() => {
     if (!payment) return "Not Available";
     if (payment.cardBrand && payment.lastFourDigits) {
-      return `${payment.cardBrand.toUpperCase()} **** ${payment.lastFourDigits}`;
+      return `${payment.cardBrand.toUpperCase()} •••• ${payment.lastFourDigits}`;
     }
     if (payment.paymentMethod) {
       return payment.paymentMethod
@@ -100,22 +97,6 @@ export function OrderDetailPage() {
         return "confirmed";
       default:
         return "placed";
-    }
-  };
-
-  const getBadgeStatus = (status: string): StatusType => {
-    switch (status.toLowerCase()) {
-      case "delivered":
-        return "completed";
-      case "processing":
-      case "shipped":
-      case "out_for_delivered":
-        return "in-progress";
-      case "cancelled":
-        return "cancelled";
-      case "pending":
-      default:
-        return "pending";
     }
   };
 
@@ -168,7 +149,7 @@ export function OrderDetailPage() {
                   </p>
                 </div>
                 <StatusBadge
-                  status={getBadgeStatus(order.status)}
+                  status={order.status as any}
                   className="px-3 py-1 text-sm"
                 />
               </div>
@@ -287,9 +268,6 @@ export function OrderDetailPage() {
             </div>
 
             {/* Delivery Tracking */}
-            {/* <div style={{ border: "1px solid red" }}>
-              <DeliveryTracker />
-            </div> */}
           </div>
 
           {/* Sidebar */}

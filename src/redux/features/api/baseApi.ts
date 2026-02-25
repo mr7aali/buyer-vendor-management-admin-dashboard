@@ -124,6 +124,97 @@ type ApiResponse<T> = {
   message: string;
   data: T;
 };
+
+export interface TransactionParticipant {
+  id: string;
+  fullName: string;
+  phone: string;
+  user: {
+    id: string;
+    email: string;
+  };
+}
+
+export interface TransactionVendorParticipant extends TransactionParticipant {
+  storename: string;
+  businessName: string | null;
+  vendorCode: string;
+}
+
+export interface AdminTransactionOrderSummary {
+  id: string;
+  orderNumber: string;
+  status: string;
+  createdAt: string;
+  subtotal: number;
+  discountAmount: number;
+  totalAmount: number;
+  buyer: TransactionParticipant;
+  vendor: TransactionVendorParticipant;
+}
+
+export interface AdminTransaction {
+  id: string;
+  stripePaymentId: string | null;
+  stripeCustomerId: string | null;
+  amount: number;
+  adminCommissionAmount: number;
+  vendorPayoutAmount: number;
+  status: string;
+  paymentMethod: string | null;
+  cardBrand: string | null;
+  lastFourDigits: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  order: AdminTransactionOrderSummary;
+}
+
+export interface AdminTransactionPaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface AdminTransactionListData {
+  items: AdminTransaction[];
+  meta: AdminTransactionPaginationMeta;
+}
+
+export interface AdminTransactionQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  orderStatus?: string;
+  paymentMethod?: string;
+  startDate?: string;
+  endDate?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  sortBy?: "createdAt" | "amount" | "status" | "orderNumber";
+  sortOrder?: "asc" | "desc";
+  buyerId?: string;
+  vendorId?: string;
+}
+
+export type AdminTransactionListResponse = ApiResponse<AdminTransactionListData>;
+
+export interface AdminTransactionDetails extends AdminTransaction {
+  order: AdminTransactionOrderSummary & {
+    updatedAt: string;
+    shippingAddress: string | null;
+    optionalAddress: string;
+    country: string;
+  };
+}
+
+export type AdminTransactionDetailsResponse =
+  ApiResponse<AdminTransactionDetails>;
+
 type AdminChatConversationRes = ApiResponse<AdminChatConversation[]>;
 type AdminChatMessagesRes = ApiResponse<AdminChatMessage[]>;
 type AdminChatMessageRes = ApiResponse<AdminChatMessage>;
@@ -246,6 +337,7 @@ export const baseApi = createApi({
     "Analytics", // Added Analytics tag
     "AdminChats",
     "Notifications",
+    "Transactions",
   ],
   endpoints: (builder) => ({
     /* ---------- ADMIN LOGIN MUTATION ---------- */
@@ -375,6 +467,29 @@ export const baseApi = createApi({
     getAdminOrderDetails: builder.query<OrderResponse, string>({
       query: (id) => `/orders/admin-order-details/${id}`,
       providesTags: ["Orders"],
+    }),
+
+    getAdminTransactions: builder.query<
+      AdminTransactionListResponse,
+      AdminTransactionQueryParams
+    >({
+      query: (params) => ({
+        url: "/transaction-history/admin",
+        method: "GET",
+        params,
+      }),
+      providesTags: ["Transactions"],
+    }),
+
+    getAdminTransactionDetails: builder.query<
+      AdminTransactionDetailsResponse,
+      string
+    >({
+      query: (id) => ({
+        url: `/transaction-history/admin/${id}`,
+        method: "GET",
+      }),
+      providesTags: ["Transactions"],
     }),
 
     getAdminUserDetails: builder.query<AdminUserDetailsResponse, string>({
@@ -732,6 +847,8 @@ export const {
   useUpdateVendorMutation,
   useGetAllOrdersQuery,
   useGetAdminOrderDetailsQuery,
+  useGetAdminTransactionsQuery,
+  useGetAdminTransactionDetailsQuery,
   useGetAdminUserDetailsQuery,
   useGetAdminMeQuery,
   useUpdateAdminProfileMutation,
