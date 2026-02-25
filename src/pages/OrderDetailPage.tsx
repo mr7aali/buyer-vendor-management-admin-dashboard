@@ -1,4 +1,3 @@
-import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Header } from "../components/dashboard/Header";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -20,13 +19,10 @@ export function OrderDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
-  const { data, isLoading, isError, error } = useGetAdminOrderDetailsQuery(
-    id || "",
-    {
-      skip: !id,
-      refetchOnMountOrArgChange: true,
-    },
-  );
+  const { data, isLoading, isError } = useGetAdminOrderDetailsQuery(id || "", {
+    skip: !id,
+    refetchOnMountOrArgChange: true,
+  });
 
   // Loading state
   if (isLoading) {
@@ -71,6 +67,25 @@ export function OrderDetailPage() {
   }
 
   const order = data.data;
+  const payment = order.payments;
+
+  const paymentMethodLabel = (() => {
+    if (!payment) return "Not Available";
+    if (payment.cardBrand && payment.lastFourDigits) {
+      return `${payment.cardBrand.toUpperCase()} •••• ${payment.lastFourDigits}`;
+    }
+    if (payment.paymentMethod) {
+      return payment.paymentMethod
+        .split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    }
+    return "Not Available";
+  })();
+
+  const paymentStatusLabel = payment?.status
+    ? payment.status.charAt(0).toUpperCase() + payment.status.slice(1)
+    : "Not Available";
 
   const getTimelineStatus = (status: string) => {
     switch (status.toLowerCase()) {
@@ -253,9 +268,6 @@ export function OrderDetailPage() {
             </div>
 
             {/* Delivery Tracking */}
-            {/* <div style={{ border: "1px solid red" }}>
-              <DeliveryTracker />
-            </div> */}
           </div>
 
           {/* Sidebar */}
@@ -268,11 +280,13 @@ export function OrderDetailPage() {
               </h3>
               <div className="mb-4 flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-[#278687] flex items-center justify-center text-white font-semibold">
-                  {order.buyer.fulllName.charAt(0).toUpperCase()}
+                  {order.buyer?.fullName
+                    ? order.buyer.fullName.charAt(0).toUpperCase()
+                    : "U"}
                 </div>
                 <div>
                   <div className="font-medium text-gray-900">
-                    {order.buyer.fulllName}
+                    {order.buyer.fullName}
                   </div>
                   <div className="text-xs text-gray-500">
                     {order.buyer.user.email}
@@ -309,7 +323,7 @@ export function OrderDetailPage() {
                 {order.vendor.logoUrl ? (
                   <img
                     src={order.vendor.logoUrl}
-                    alt={order.vendor.fulllName}
+                    alt={order.vendor.fullName}
                     className="h-10 w-10 rounded-lg border border-gray-200 object-cover"
                   />
                 ) : (
@@ -319,7 +333,7 @@ export function OrderDetailPage() {
                 )}
                 <div>
                   <div className="font-medium text-gray-900">
-                    {order.vendor.businessName || order.vendor.fulllName}
+                    {order.vendor.businessName || order.vendor.fullName}
                   </div>
                   <div className="text-xs text-gray-500">
                     {order.vendor.vendorCode}
@@ -356,7 +370,13 @@ export function OrderDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Payment Method</span>
                   <span className="font-medium text-gray-900">
-                    {order.payments || "Not Available"}
+                    {paymentMethodLabel}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Payment Status</span>
+                  <span className="font-medium text-gray-900">
+                    {paymentStatusLabel}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

@@ -203,7 +203,10 @@ export function BuyersPage() {
                     {buyers.map((buyer) => (
                       <tr
                         key={buyer.id}
-                        onClick={() => navigate(`/buyers/${buyer.id}`)}
+                        onClick={() =>
+                          buyer?.buyer?.id &&
+                          navigate(`/buyers/${buyer?.buyer.id}`)
+                        }
                         className="group cursor-pointer transition-colors hover:bg-gray-50"
                       >
                         <td className="whitespace-nowrap px-6 py-4">
