@@ -1,43 +1,21 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "../components/dashboard/Header";
 import { ChatInterface } from "../components/chat/ChatInterface";
-import { Search, AlertCircle } from "lucide-react";
+import { Search } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { skipToken } from "@reduxjs/toolkit/query";
 import {
+  type AdminChatConversation,
+  type AdminChatMessage,
   useGetAdminChatConversationsQuery,
   useGetAdminChatMessagesQuery,
   useSendAdminChatMessageMutation,
 } from "@/redux/features/api/baseApi";
 
-type AdminChatConversation = {
-  threadId: string;
-  participantType: "buyer" | "vendor";
-  participant: {
-    id: string;
-    userId: string;
-    name: string;
-    avatar: string;
-    role: string;
-    email?: string;
-  };
-  lastMessage: AdminChatMessage | null;
-  unreadCount: number;
-  updatedAt: string;
-};
-
-type AdminChatMessage = {
-  id: string;
-  threadId: string;
-  senderType: "ADMIN" | "BUYER" | "VENDOR";
-  messageText: string;
-  isRead: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export function ChatsPage() {
-  const [activeFilter, setActiveFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "user" | "vendor">(
+    "all",
+  );
   const [searchValue, setSearchValue] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<AdminChatConversation[]>(
@@ -48,33 +26,28 @@ export function ChatsPage() {
   const socketRef = useRef<Socket | null>(null);
 
   const {
-    data: conversationsDataRw,
+    data: conversationsData = [],
     refetch: refetchConversations,
     isLoading,
   } = useGetAdminChatConversationsQuery();
-  const conversationsData = useMemo(() => {
-    if (Array.isArray(conversationsDataRw?.data)) {
-      return conversationsDataRw.data;
-    }
-    if (Array.isArray(conversationsDataRw)) {
-      return conversationsDataRw;
-    }
-    return [];
-  }, [conversationsDataRw]);
-  const { data: messagesDataRw, isFetching: messagesLoading } =
+  const { data: messagesData = [], isFetching: messagesLoading } =
     useGetAdminChatMessagesQuery(selectedThreadId ?? skipToken);
   const [sendAdminChatMessage] = useSendAdminChatMessageMutation();
 
   useEffect(() => {
-    if (conversationsData.length) {
-      setConversations(conversationsData as AdminChatConversation[]);
-    } else {
-      setConversations([]);
-    }
+    setConversations(conversationsData);
   }, [conversationsData]);
 
   useEffect(() => {
-    if (!selectedThreadId && conversations.length > 0) {
+    if (!conversations.length) {
+      setSelectedThreadId(null);
+      return;
+    }
+
+    if (
+      !selectedThreadId ||
+      !conversations.some((item) => item.threadId === selectedThreadId)
+    ) {
       setSelectedThreadId(conversations[0].threadId);
     }
   }, [conversations, selectedThreadId]);
@@ -84,32 +57,24 @@ export function ChatsPage() {
   }, [selectedThreadId]);
 
   useEffect(() => {
-    const normalizedMessages = Array.isArray(messagesDataRw?.data)
-      ? messagesDataRw?.data
-      : Array.isArray(messagesDataRw)
-        ? messagesDataRw
-        : [];
-    if (normalizedMessages.length) {
-      setMessages(normalizedMessages as AdminChatMessage[]);
-      if (selectedThreadId) {
-        setConversations((prev) =>
-          prev.map((item) =>
-            item.threadId === selectedThreadId
-              ? { ...item, unreadCount: 0 }
-              : item,
-          ),
-        );
-      }
-    } else {
-      setMessages([]);
+    setMessages(messagesData);
+
+    if (selectedThreadId && messagesData.length) {
+      setConversations((prev) =>
+        prev.map((item) =>
+          item.threadId === selectedThreadId ? { ...item, unreadCount: 0 } : item,
+        ),
+      );
     }
-  }, [messagesDataRw, selectedThreadId]);
+  }, [messagesData, selectedThreadId]);
 
   useEffect(() => {
     const token = localStorage?.getItem("accessToken");
     if (!token) return;
 
-    const socket = io(`${process.env.VITE_BASE_API_URL}/admin-chats`, {
+    const socketBaseUrl =
+      import.meta.env.VITE_BASE_API_URL || window.location.origin;
+    const socket = io(`${socketBaseUrl}/admin-chats`, {
       auth: { token },
     });
     socketRef.current = socket;
@@ -155,7 +120,7 @@ export function ChatsPage() {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [refetchConversations]);
 
   const filteredConversations = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase();
@@ -178,7 +143,15 @@ export function ChatsPage() {
     [conversations, selectedThreadId],
   );
 
-  const uiMessages = useMemo(
+  type ChatUiMessage = {
+    id: string;
+    text: string;
+    sender: "admin" | "user";
+    timestamp: string;
+    status: "sent" | "delivered" | "read";
+  };
+
+  const uiMessages = useMemo<ChatUiMessage[]>(
     () =>
       messages.map((msg) => ({
         id: msg.id,
@@ -209,7 +182,12 @@ export function ChatsPage() {
       messageText: text,
     }).unwrap();
 
-    setMessages((prev) => [...prev, message as AdminChatMessage]);
+    setMessages((prev) => {
+      if (prev.some((item) => item.id === message.id)) {
+        return prev;
+      }
+      return [...prev, message];
+    });
   };
 
   return (
@@ -241,7 +219,7 @@ export function ChatsPage() {
                 />
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2">
-                {["all", "user", "vendor", "complaint"].map((f) => (
+                {(["all", "user", "vendor"] as const).map((f) => (
                   <button
                     key={f}
                     onClick={() => setActiveFilter(f)}
@@ -254,9 +232,12 @@ export function ChatsPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto">
+              {isLoading && !conversations.length ? (
+                <div className="p-4 text-sm text-gray-400">
+                  Loading conversations...
+                </div>
+              ) : null}
               {filteredConversations.map((chat) => {
-                const type =
-                  chat.participantType === "buyer" ? "user" : "vendor";
                 const lastTime = chat.lastMessage?.createdAt
                   ? new Date(chat.lastMessage.createdAt).toLocaleTimeString(
                       [],
@@ -281,9 +262,6 @@ export function ChatsPage() {
                         >
                           {chat.participant.name}
                         </h3>
-                        {type === "complaint" && (
-                          <AlertCircle className="h-3 w-3 text-red-500" />
-                        )}
                       </div>
                       <span className="text-xs text-gray-400">{lastTime}</span>
                     </div>
@@ -300,6 +278,11 @@ export function ChatsPage() {
                   </div>
                 );
               })}
+              {!isLoading && !filteredConversations.length ? (
+                <div className="p-4 text-sm text-gray-400">
+                  No conversations found.
+                </div>
+              ) : null}
             </div>
           </div>
 

@@ -118,12 +118,15 @@ export interface AdminChatConversation {
   unreadCount: number;
   updatedAt: string;
 }
-type AdminChatConversationRes = {
+type ApiResponse<T> = {
   success: boolean;
   statusCode: number;
   message: string;
-  data: AdminChatConversation[];
+  data: T;
 };
+type AdminChatConversationRes = ApiResponse<AdminChatConversation[]>;
+type AdminChatMessagesRes = ApiResponse<AdminChatMessage[]>;
+type AdminChatMessageRes = ApiResponse<AdminChatMessage>;
 
 export type NotificationType = "info" | "success" | "warning" | "error";
 export type NotificationCategory = "system" | "buyer" | "vendor" | "broadcast";
@@ -350,7 +353,7 @@ export const baseApi = createApi({
         method: "PATCH",
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: "Vendors", id },
         "Vendors",
       ],
@@ -537,11 +540,12 @@ export const baseApi = createApi({
     }),
 
     /* ---------- ADMIN CHAT QUERIES ---------- */
-    getAdminChatConversations: builder.query<AdminChatConversationRes, void>({
+    getAdminChatConversations: builder.query<AdminChatConversation[], void>({
       query: () => ({
         url: "/admin-chats/admin/conversations",
         method: "GET",
       }),
+      transformResponse: (response: AdminChatConversationRes) => response.data,
       providesTags: ["AdminChats"],
     }),
 
@@ -550,6 +554,7 @@ export const baseApi = createApi({
         url: `/admin-chats/admin/threads/${threadId}/messages`,
         method: "GET",
       }),
+      transformResponse: (response: AdminChatMessagesRes) => response.data,
       providesTags: ["AdminChats"],
     }),
 
@@ -562,6 +567,7 @@ export const baseApi = createApi({
         method: "POST",
         body: { messageText },
       }),
+      transformResponse: (response: AdminChatMessageRes) => response.data,
       invalidatesTags: ["AdminChats"],
     }),
 
